@@ -1,13 +1,14 @@
 import csv
 import spotframework.net.playlist as playlistpull
+import datetime
 
 headers = ['name', 'artist', 'album', 'album artist', 'added', 'spotify id', 'added by']
 
-def exportPlaylist(user, playlistid):
+def exportPlaylist(user, playlistid, name):
 
     playlist = playlistpull.getPlaylistTracks(user, playlistid)
 
-    with open('out.csv', 'w') as fileobj:
+    with open('{}_{}.csv'.format(name, str(datetime.datetime.now()).split('.')[0]), 'w') as fileobj:
 
         writer = csv.DictWriter(fileobj, fieldnames = headers)
         writer.writeheader()
