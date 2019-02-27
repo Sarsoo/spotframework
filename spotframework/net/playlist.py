@@ -44,3 +44,32 @@ def getUserPlaylists(user):
 
     return returnlist
 
+def getPlaylistTracks(user, playlistid, offset = 0):
+
+    headers = {'Authorization': 'Bearer ' + user.access_token}
+    
+    tracks = []
+    
+    params = {'offset': offset, 'limit': limit}
+    req = requests.get(const.api_url + 'playlists/{}/tracks'.format(playlistid), params = params, headers = headers)
+    
+    #print(req.text)
+
+    if req.status_code == 200:
+    
+        print(req.text)
+        resp = req.json()
+
+        tracks += resp['items']
+    
+        if resp['next']:
+            tracks += getPlaylistTracks(user, playlistid, offset + limit)
+
+        #print(req.text)        
+
+        return tracks
+
+    else:
+        return None
+    
+
