@@ -5,11 +5,16 @@ if __name__ == '__main__':
     print('hello world')
     
     user = userclass.User()
-    user.refreshToken()
 
     playlists = playlist.getPlaylists(user)
 
-    for playlist in playlists:
-        print(playlist['name'])
+    #for playlister in playlists:
+        #print(playlister['name'])
 
-    print(len(playlists))
+    print(playlists[0])
+    #print(len(playlists))
+
+    print(user.username)
+
+    moreplaylists = playlist.getUserPlaylists(user)
+    print(len(moreplaylists))

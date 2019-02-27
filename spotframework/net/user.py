@@ -10,6 +10,10 @@ class User:
     def __init__(self):
         self.access_token = os.environ['SPOTACCESS']
         self.refresh_token = os.environ['SPOTREFRESH']
+        
+        self.refreshToken()
+
+        self.username = self.getInfo()['id']
 
     def refreshToken(self):
         
@@ -20,7 +24,15 @@ class User:
     
         req = requests.post('https://accounts.spotify.com/api/token', data = data, headers = headers )
    
-        print(req.status_code)
-        print(req.text)
+        #print(req.status_code)
+        #print(req.text)
+        
+        if req.status_code is 200:
+            self.access_token = req.json()['access_token']
 
-        self.access_token = req.json()['access_token']
+    def getInfo(self):
+        
+        headers = { 'Authorization' : 'Bearer %s' %  self.access_token }
+
+        req = requests.get('https://api.spotify.com/v1/me', headers = headers)
+        return req.json()
