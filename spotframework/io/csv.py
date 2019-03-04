@@ -2,7 +2,7 @@ import csv
 import spotframework.net.playlist as playlistpull
 import datetime
 
-headers = ['name', 'artist', 'album', 'album artist', 'added', 'spotify id', 'added by']
+headers = ['name', 'artist', 'album', 'album artist', 'added', 'track id', 'album id', 'added by']
 
 def exportPlaylist(user, playlistid, name, path):
 
@@ -19,7 +19,8 @@ def exportPlaylist(user, playlistid, name, path):
                     'name':track['track']['name'],
                     'album':track['track']['album']['name'],
                     'added':track['added_at'],
-                    'spotify id':track['track']['id'],
+                    'track id':track['track']['id'],
+                    'album id':track['track']['album']['id'],
                     'added by':track['added_by']['id']}
             
             alart = []
