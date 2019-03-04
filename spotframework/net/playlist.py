@@ -57,7 +57,7 @@ def getPlaylistTracks(user, playlistid, offset = 0):
 
     if req.status_code == 200:
     
-        print(req.text)
+        #print(req.text)
         resp = req.json()
 
         tracks += resp['items']
@@ -70,6 +70,4 @@ def getPlaylistTracks(user, playlistid, offset = 0):
         return tracks
 
     else:
-        return None
-    
-
+        raise ValueError("Couldn't Pull Playlist " + str(playlistid) + ' ' + str(req.status_code))

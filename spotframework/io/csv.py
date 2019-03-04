@@ -4,11 +4,11 @@ import datetime
 
 headers = ['name', 'artist', 'album', 'album artist', 'added', 'spotify id', 'added by']
 
-def exportPlaylist(user, playlistid, name):
+def exportPlaylist(user, playlistid, name, path):
 
     playlist = playlistpull.getPlaylistTracks(user, playlistid)
 
-    with open('{}_{}.csv'.format(name, str(datetime.datetime.now()).split('.')[0]), 'w') as fileobj:
+    with open('{}{}_{}.csv'.format(path, name.replace('/', '_'), str(datetime.datetime.now()).split('.')[0]), 'w') as fileobj:
 
         writer = csv.DictWriter(fileobj, fieldnames = headers)
         writer.writeheader()

@@ -27,6 +27,6 @@ if __name__ == '__main__':
 
     import spotframework.io.csv as csvwrite
 
-    csvwrite.exportPlaylist(user, '000Eh2vXzYGgrEFlgcWZj3', 'february')
+    csvwrite.exportPlaylist(user, '000Eh2vXzYGgrEFlgcWZj3', 'february', '')
 
     print(user.access_token)
