@@ -7,8 +7,10 @@ headers = ['name', 'artist', 'album', 'album artist', 'added', 'track id', 'albu
 def exportPlaylist(user, playlistid, name, path):
 
     playlist = playlistpull.getPlaylistTracks(user, playlistid)
+    
+    date = str(datetime.datetime.now())
 
-    with open('{}{}_{}.csv'.format(path, name.replace('/', '_'), str(datetime.datetime.now()).split('.')[0]), 'w') as fileobj:
+    with open('{}/{}_{}.csv'.format(path, name.replace('/', '_'), date.split('.')[0]), 'w') as fileobj:
 
         writer = csv.DictWriter(fileobj, fieldnames = headers)
         writer.writeheader()
