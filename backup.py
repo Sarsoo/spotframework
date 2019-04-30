@@ -1,14 +1,13 @@
 import spotframework.net.user as userclass
-import spotframework.net.playlist as playlist
+import spotframework.net.network as networkclass
 import spotframework.io.csv as csvwrite
 
 import sys, datetime, os
 
 if __name__ == '__main__':
 
-    user = userclass.User()
-
-    playlists = playlist.getUserPlaylists(user)
+    network = networkclass.network(userclass.User())
+    playlists = network.getUserPlaylists()
     
     path = sys.argv[1]
     
@@ -20,5 +19,5 @@ if __name__ == '__main__':
         os.makedirs(totalpath)
 
     for play in playlists:
-        csvwrite.exportPlaylist(user, play['id'], play['name'], totalpath)
-        print(play['name'] + ' exported')
+        csvwrite.exportPlaylist(play, totalpath)
+        print(play.name + ' exported')

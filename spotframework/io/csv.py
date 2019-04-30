@@ -1,21 +1,24 @@
 import csv
-import spotframework.net.playlist as playlistpull
+import spotframework.net.network as network
 import datetime
 
 headers = ['name', 'artist', 'album', 'album artist', 'added', 'track id', 'album id', 'added by']
 
-def exportPlaylist(user, playlistid, name, path):
+def exportPlaylist(playlist, path, name=None):
 
-    playlist = playlistpull.getPlaylistTracks(user, playlistid)
+    #playlist = network.getPlaylistTracks(user, playlistid)
     
     date = str(datetime.datetime.now())
+
+    if name is None:
+        name = playlist.name
 
     with open('{}/{}_{}.csv'.format(path, name.replace('/', '_'), date.split('.')[0]), 'w') as fileobj:
 
         writer = csv.DictWriter(fileobj, fieldnames = headers)
         writer.writeheader()
 
-        for track in playlist:
+        for track in playlist.tracks:
 
             trackdict = {
                     'name':track['track']['name'],
