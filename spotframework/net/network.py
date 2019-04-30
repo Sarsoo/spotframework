@@ -93,18 +93,44 @@ class network:
         else:
             raise ValueError("Couldn't Pull Playlist " + str(playlistid) + ' ' + str(req.status_code))
 
+    def getAvailableDevices(self):
+
+        headers = {'Authorization': 'Bearer ' + self.user.access_token}
+
+        req = requests.get(const.api_url + 'me/player/devices', headers=headers)
+
+        if req.status_code == 200:
+            return req.json()
+        else:
+            return None
+
     def getPlayer(self):
 
         headers = {'Authorization': 'Bearer ' + self.user.access_token}
 
         req = requests.get(const.api_url + 'me/player', headers=headers)
 
-        print(req.status_code)
-        print(req.text)
+        if req.status_code == 200:
+            return req.json()
+        else:
+            return None
 
-    def play(self, context, contexttype, deviceid=None):
+    def getDeviceID(self, devicename):
+
+        return next((i for i in self.getAvailableDevices()['devices'] if i['name'] == devicename), None)['id']
+
+    def play(self, uri, deviceid=None):
 
         headers = {'Authorization': 'Bearer ' + self.user.access_token}
 
-        params = {'limit': limit}
-        req = requests.put(const.api_url + 'me/player/play', params=params, headers=headers)
+        if deviceid is not None:
+            params = {'device_id': deviceid}
+        else:
+            params = None
+
+        payload = {'context_uri': uri}
+
+        req = requests.put(const.api_url + 'me/player/play', params=params, json=payload, headers=headers)
+
+        print(req.status_code)
+        print(req.text)
