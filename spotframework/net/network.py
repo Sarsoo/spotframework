@@ -92,3 +92,19 @@ class network:
 
         else:
             raise ValueError("Couldn't Pull Playlist " + str(playlistid) + ' ' + str(req.status_code))
+
+    def getPlayer(self):
+
+        headers = {'Authorization': 'Bearer ' + self.user.access_token}
+
+        req = requests.get(const.api_url + 'me/player', headers=headers)
+
+        print(req.status_code)
+        print(req.text)
+
+    def play(self, context, contexttype, deviceid=None):
+
+        headers = {'Authorization': 'Bearer ' + self.user.access_token}
+
+        params = {'limit': limit}
+        req = requests.put(const.api_url + 'me/player/play', params=params, headers=headers)

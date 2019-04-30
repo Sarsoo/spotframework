@@ -7,4 +7,6 @@ if __name__ == '__main__':
 
     network = networkclass.network(userclass.User())
 
-    network.getPlaylist('000Eh2vXzYGgrEFlgcWZj3')
+    #network.getPlaylist('000Eh2vXzYGgrEFlgcWZj3')
+
+    network.getPlayer()
