@@ -134,3 +134,32 @@ class network:
 
         print(req.status_code)
         print(req.text)
+
+    def next(self, deviceid=None):
+
+        headers = {'Authorization': 'Bearer ' + self.user.access_token}
+
+        if deviceid is not None:
+            params = {'device_id': deviceid}
+        else:
+            params = None
+
+        req = requests.post(const.api_url + 'me/player/next', params=params, headers=headers)
+
+        print(req.status_code)
+        print(req.text)
+
+
+    def setShuffle(self, state, deviceid=None):
+
+        headers = {'Authorization': 'Bearer ' + self.user.access_token}
+
+        params = {'state': str(state).lower()}
+
+        if deviceid is not None:
+            params['device_id'] = deviceid
+
+        req = requests.put(const.api_url + 'me/player/shuffle', params=params, headers=headers)
+
+        print(req.status_code)
+        print(req.text)

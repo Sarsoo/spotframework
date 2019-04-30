@@ -7,3 +7,6 @@ if __name__ == '__main__':
     network = networkclass.network(userclass.User())
 
     network.play(os.environ['SPOTALARMURI'], network.getDeviceID(os.environ['SPOTALARMDEVICENAME']))
+
+    network.setShuffle(True)
+    network.next()
