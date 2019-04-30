@@ -24,7 +24,7 @@ class network:
         return playlist
 
     def getPlaylists(self, offset=0):
-        print('getting user playlists')
+        print('getting user playlists {}'.format(offset))
 
         headers = {'Authorization': 'Bearer ' + self.user.access_token}
 
