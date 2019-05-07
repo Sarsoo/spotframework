@@ -26,4 +26,5 @@ if __name__ == '__main__':
         network.play(os.environ['SPOTALARMURI'], network.getDeviceID(os.environ['SPOTALARMDEVICENAME']))
 
         network.setShuffle(True)
+        network.setVolume(os.environ['SPOTALARMVOLUME'])
         network.next()

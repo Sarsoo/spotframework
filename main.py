@@ -9,4 +9,6 @@ if __name__ == '__main__':
 
     #network.getPlaylist('000Eh2vXzYGgrEFlgcWZj3')
 
-    network.getPlayer()
+    #network.getPlayer()
+
+    network.setVolume(30)

@@ -149,7 +149,6 @@ class network:
         print(req.status_code)
         print(req.text)
 
-
     def setShuffle(self, state, deviceid=None):
 
         headers = {'Authorization': 'Bearer ' + self.user.access_token}
@@ -160,6 +159,20 @@ class network:
             params['device_id'] = deviceid
 
         req = requests.put(const.api_url + 'me/player/shuffle', params=params, headers=headers)
+
+        print(req.status_code)
+        print(req.text)
+
+    def setVolume(self, volume, deviceid=None):
+
+        headers = {'Authorization': 'Bearer ' + self.user.access_token}
+
+        params = {'volume_percent': volume}
+
+        if deviceid is not None:
+            params['device_id'] = deviceid
+
+        req = requests.put(const.api_url + 'me/player/volume', params=params, headers=headers)
 
         print(req.status_code)
         print(req.text)
