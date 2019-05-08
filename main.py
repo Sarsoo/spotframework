@@ -11,4 +11,6 @@ if __name__ == '__main__':
 
     #network.getPlayer()
 
-    network.setVolume(30)
+    playlists = network.getUserPlaylists()
+    for playlist in playlists:
+        print(playlist.name + ' ' + playlist.playlistid)

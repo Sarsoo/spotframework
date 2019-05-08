@@ -8,6 +8,9 @@ if __name__ == '__main__':
 
     network = networkclass.network(userclass.User())
     playlists = network.getUserPlaylists()
+
+    for playlist in playlists:
+        playlist.tracks = network.getPlaylistTracks(playlist.playlistid)
     
     path = sys.argv[1]
     

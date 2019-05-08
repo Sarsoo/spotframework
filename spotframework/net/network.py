@@ -43,7 +43,7 @@ class network:
 
             for responseplaylist in resp['items']:
 
-                playlist = self.getPlaylist(responseplaylist['id'], tracksonly=True)
+                playlist = playlistclass(responseplaylist['id'], responseplaylist['uri'])
                 playlist.name = responseplaylist['name']
                 playlist.userid = responseplaylist['owner']['id']
 
@@ -68,6 +68,8 @@ class network:
     def getPlaylistTracks(self, playlistid, offset=0):
 
         headers = {'Authorization': 'Bearer ' + self.user.access_token}
+
+        print('getting playlist tracks {} {]'.format(playlistid, offset))
 
         tracks = []
 

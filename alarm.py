@@ -1,7 +1,7 @@
 import spotframework.net.user as userclass
 import spotframework.net.network as networkclass
 
-import os
+import os, datetime
 
 def checkPhone():
 
@@ -23,7 +23,14 @@ if __name__ == '__main__':
             break
 
     if found:
-        network.play(os.environ['SPOTALARMURI'], network.getDeviceID(os.environ['SPOTALARMDEVICENAME']))
+
+        date = datetime.datetime.now()
+
+        playlists = network.getUserPlaylists()
+
+        playlisturi = next((i.uri for i in playlists if i.name == date.strftime("%B %-y").lower()), os.environ['SPOTALARMURI'])
+
+        network.play(playlisturi, network.getDeviceID(os.environ['SPOTALARMDEVICENAME']))
 
         network.setShuffle(True)
         network.setVolume(os.environ['SPOTALARMVOLUME'])
