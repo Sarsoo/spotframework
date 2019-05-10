@@ -69,7 +69,7 @@ class network:
 
         headers = {'Authorization': 'Bearer ' + self.user.access_token}
 
-        print('getting playlist tracks {} {]'.format(playlistid, offset))
+        print('getting playlist tracks {} {}'.format(playlistid, offset))
 
         tracks = []
 
