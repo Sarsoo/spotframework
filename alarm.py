@@ -8,34 +8,40 @@ import datetime
 def checkPhone():
 
     response = os.system("ping -c 1 -w5 " + os.environ['PHONEIP'] + " > /dev/null 2>&1")
-    print('checking for phone')
+    log.log('checking for phone')
     if response == 0:
         return True
     else:
         return False
 
 if __name__ == '__main__':
-    network = networkclass.network(userclass.User())
 
-    found = False
+    try:
 
-    for i in range(0, 36):
-        if checkPhone():
-            found = True
-            break
+        network = networkclass.network(userclass.User())
 
-    if found:
+        found = False
 
-        date = datetime.datetime.now()
+        for i in range(0, 36):
+            if checkPhone():
+                found = True
+                break
 
-        playlists = network.getUserPlaylists()
+        if found:
 
-        playlisturi = next((i.uri for i in playlists if i.name == date.strftime("%B %-y").lower()), os.environ['SPOTALARMURI'])
+            date = datetime.datetime.now()
 
-        network.play(playlisturi, network.getDeviceID(os.environ['SPOTALARMDEVICENAME']))
+            playlists = network.getUserPlaylists()
 
-        network.setShuffle(True)
-        network.setVolume(os.environ['SPOTALARMVOLUME'])
-        network.next()
+            playlisturi = next((i.uri for i in playlists if i.name == date.strftime("%B %-y").lower()), os.environ['SPOTALARMURI'])
 
-    log.dumpLog()
+            network.play(playlisturi, network.getDeviceID(os.environ['SPOTALARMDEVICENAME']))
+
+            network.setShuffle(True)
+            network.setVolume(os.environ['SPOTALARMVOLUME'])
+            network.next()
+
+        log.dumpLog()
+
+    except:
+        log.dumpLog()

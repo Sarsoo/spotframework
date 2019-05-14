@@ -9,22 +9,27 @@ import os
 
 if __name__ == '__main__':
 
-    network = networkclass.network(userclass.User())
-    playlists = network.getUserPlaylists()
+    try:
 
-    for playlist in playlists:
-        playlist.tracks = network.getPlaylistTracks(playlist.playlistid)
-    
-    path = sys.argv[1]
-    
-    datepath = str(datetime.datetime.now()).split(' ')[0].replace('-', '/')
+        network = networkclass.network(userclass.User())
+        playlists = network.getUserPlaylists()
 
-    totalpath = os.path.join(path, datepath)
-    pathdir = os.path.dirname(totalpath)
-    if not os.path.exists(totalpath):
-        os.makedirs(totalpath)
+        for playlist in playlists:
+            playlist.tracks = network.getPlaylistTracks(playlist.playlistid)
 
-    for play in playlists:
-        csvwrite.exportPlaylist(play, totalpath)
+        path = sys.argv[1]
 
-    log.dumpLog()
+        datepath = str(datetime.datetime.now()).split(' ')[0].replace('-', '/')
+
+        totalpath = os.path.join(path, datepath)
+        pathdir = os.path.dirname(totalpath)
+        if not os.path.exists(totalpath):
+            os.makedirs(totalpath)
+
+        for play in playlists:
+            csvwrite.exportPlaylist(play, totalpath)
+
+        log.dumpLog()
+
+    except:
+        log.dumpLog()
