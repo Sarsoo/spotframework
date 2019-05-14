@@ -7,10 +7,12 @@ if __name__ == '__main__':
 
     network = networkclass.network(userclass.User())
 
-    #network.getPlaylist('000Eh2vXzYGgrEFlgcWZj3')
+    # network.setVolume(105)
+
+    network.getPlaylist('000Eh2vXzYGgrEFlgcWZj3')
 
     #network.getPlayer()
 
-    playlists = network.getUserPlaylists()
-    for playlist in playlists:
-        print(playlist.name + ' ' + playlist.playlistid)
+    # playlists = network.getUserPlaylists()
+    # for playlist in playlists:
+    #     print(playlist.name + ' ' + playlist.playlistid)

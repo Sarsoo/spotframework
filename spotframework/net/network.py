@@ -1,6 +1,7 @@
 import requests
 from . import const
 from spotframework.model.playlist import playlist as playlistclass
+import spotframework.log.log as log
 
 limit = 50
 
@@ -10,8 +11,47 @@ class network:
     def __init__(self, user):
         self.user = user
 
+    def _makeGetRequest(self, method, url, params=None, headers=None):
+
+        req = requests.get(const.api_url + url, params=params, headers=headers)
+
+        if 200 <= req.status_code < 300:
+            log.log(method, 'get', str(req.status_code))
+            return req.json()
+        else:
+            log.log(method, 'get', str(req.status_code), req.text)
+
+        return None
+
+    def _makePostRequest(self, method, url, params=None, headers=None):
+
+        req = requests.post(const.api_url + url, params=params, headers=headers)
+
+        if 200 <= req.status_code < 300:
+            log.log(method, 'post', str(req.status_code))
+            return req.text
+        else:
+            log.log(method, 'post', str(req.status_code), req.text)
+
+        return None
+
+    def _makePutRequest(self, method, url, params=None, json=None, headers=None):
+
+        req = requests.put(const.api_url + url, params=params, json=json, headers=headers)
+
+        if 200 <= req.status_code < 300:
+            log.log(method, 'put', str(req.status_code))
+            return req.text
+        else:
+            log.log(method, 'put', str(req.status_code), req.text)
+
+        return None
+
+
     def getPlaylist(self, playlistid, tracksonly=False):
-        print('getting ' + playlistid)
+
+        log.log("getPlaylist", playlistid)
+        # print('getting ' + playlistid)
 
         tracks = self.getPlaylistTracks(playlistid)
 
@@ -24,22 +64,19 @@ class network:
         return playlist
 
     def getPlaylists(self, offset=0):
-        print('getting user playlists {}'.format(offset))
+
+        log.log("getPlaylists", offset)
+        # print('getting user playlists {}'.format(offset))
 
         headers = {'Authorization': 'Bearer ' + self.user.access_token}
 
         playlists = []
 
         params = {'offset': offset, 'limit': limit}
-        req = requests.get(const.api_url + 'me/playlists', params=params, headers=headers)
 
-        #print(req.text)
+        resp = self._makeGetRequest('getPlaylists', 'me/playlists', params=params, headers=headers)
 
-        if req.status_code == 200:
-
-            #print(req.text)
-
-            resp = req.json()
+        if resp:
 
             for responseplaylist in resp['items']:
 
@@ -54,8 +91,6 @@ class network:
             if resp['next']:
                 playlists += self.getPlaylists(offset + limit)
 
-            #print(req.text)
-
             return playlists
 
         else:
@@ -63,65 +98,57 @@ class network:
 
     def getUserPlaylists(self):
 
+        log.log("getUserPlaylists")
+
         return list(filter(lambda x: x.userid == self.user.username, self.getPlaylists()))
 
     def getPlaylistTracks(self, playlistid, offset=0):
 
-        headers = {'Authorization': 'Bearer ' + self.user.access_token}
+        log.log("getPlaylistTracks", playlistid, offset)
 
-        print('getting playlist tracks {} {}'.format(playlistid, offset))
+        headers = {'Authorization': 'Bearer ' + self.user.access_token}
 
         tracks = []
 
         params = {'offset': offset, 'limit': limit}
-        req = requests.get(const.api_url + 'playlists/{}/tracks'.format(playlistid), params=params, headers=headers)
 
-        #print(req.text)
+        resp = self._makeGetRequest('getPlaylistTracks', 'playlists/{}/tracks'.format(playlistid), params, headers)
 
-        if req.status_code == 200:
+        tracks += resp['items']
 
-            #print(req.text)
-            resp = req.json()
+        if resp['next']:
+            tracks += self.getPlaylistTracks(playlistid, offset + limit)
 
-            tracks += resp['items']
+        return tracks
 
-            if resp['next']:
-                tracks += self.getPlaylistTracks(playlistid, offset + limit)
-
-            #print(req.text)
-
-            return tracks
-
-        else:
-            raise ValueError("Couldn't Pull Playlist " + str(playlistid) + ' ' + str(req.status_code))
 
     def getAvailableDevices(self):
 
+        log.log("getAvailableDevices")
+
         headers = {'Authorization': 'Bearer ' + self.user.access_token}
 
-        req = requests.get(const.api_url + 'me/player/devices', headers=headers)
+        return self._makeGetRequest('getAvailableDevices', 'me/player/devices', headers=headers)
 
-        if req.status_code == 200:
-            return req.json()
-        else:
-            return None
 
     def getPlayer(self):
 
+        log.log("getPlayer")
+
         headers = {'Authorization': 'Bearer ' + self.user.access_token}
 
-        req = requests.get(const.api_url + 'me/player', headers=headers)
+        return self._makeGetRequest('getPlayer', 'me/player', headers=headers)
 
-        if req.status_code == 200:
-            return req.json()
-        else:
-            return None
 
     def getDeviceID(self, devicename):
+
+        log.log("getDeviceID", devicename)
 
         return next((i for i in self.getAvailableDevices()['devices'] if i['name'] == devicename), None)['id']
 
     def play(self, uri, deviceid=None):
+
+        log.log("play", uri, deviceid)
 
         headers = {'Authorization': 'Bearer ' + self.user.access_token}
 
@@ -132,12 +159,12 @@ class network:
 
         payload = {'context_uri': uri}
 
-        req = requests.put(const.api_url + 'me/player/play', params=params, json=payload, headers=headers)
+        req = self._makePutRequest('play', 'me/player/play', params=params, json=payload, headers=headers)
 
-        print(req.status_code)
-        print(req.text)
 
     def next(self, deviceid=None):
+
+        log.log("next", deviceid)
 
         headers = {'Authorization': 'Bearer ' + self.user.access_token}
 
@@ -146,12 +173,12 @@ class network:
         else:
             params = None
 
-        req = requests.post(const.api_url + 'me/player/next', params=params, headers=headers)
+        req = self._makePostRequest('next', 'me/player/next', params=params, headers=headers)
 
-        print(req.status_code)
-        print(req.text)
 
     def setShuffle(self, state, deviceid=None):
+
+        log.log("setShuffle", state, deviceid)
 
         headers = {'Authorization': 'Bearer ' + self.user.access_token}
 
@@ -160,21 +187,22 @@ class network:
         if deviceid is not None:
             params['device_id'] = deviceid
 
-        req = requests.put(const.api_url + 'me/player/shuffle', params=params, headers=headers)
+        req = self._makePutRequest('setShuffle', 'me/player/shuffle', params=params, headers=headers)
 
-        print(req.status_code)
-        print(req.text)
 
     def setVolume(self, volume, deviceid=None):
 
-        headers = {'Authorization': 'Bearer ' + self.user.access_token}
+        log.log("setVolume", volume, deviceid)
 
-        params = {'volume_percent': volume}
+        if 0 <= int(volume) <= 100:
+            headers = {'Authorization': 'Bearer ' + self.user.access_token}
 
-        if deviceid is not None:
-            params['device_id'] = deviceid
+            params = {'volume_percent': volume}
 
-        req = requests.put(const.api_url + 'me/player/volume', params=params, headers=headers)
+            if deviceid is not None:
+                params['device_id'] = deviceid
 
-        print(req.status_code)
-        print(req.text)
+            req = self._makePutRequest('setVolume', 'me/player/volume', params=params, headers=headers)
+
+        else:
+            log.log("setVolume", volume, "not allowed")

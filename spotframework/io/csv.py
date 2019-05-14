@@ -1,9 +1,13 @@
 import csv
 import datetime
 
+import spotframework.log.log as log
+
 headers = ['name', 'artist', 'album', 'album artist', 'added', 'track id', 'album id', 'added by']
 
 def exportPlaylist(playlist, path, name=None):
+
+    log.log('exportPlaylist', playlist.name, path, name)
     
     date = str(datetime.datetime.now())
 

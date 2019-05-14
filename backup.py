@@ -1,8 +1,11 @@
 import spotframework.net.user as userclass
 import spotframework.net.network as networkclass
 import spotframework.io.csv as csvwrite
+import spotframework.log.log as log
 
-import sys, datetime, os
+import sys
+import datetime
+import os
 
 if __name__ == '__main__':
 
@@ -23,4 +26,5 @@ if __name__ == '__main__':
 
     for play in playlists:
         csvwrite.exportPlaylist(play, totalpath)
-        print(play.name + ' exported')
+
+    log.dumpLog()

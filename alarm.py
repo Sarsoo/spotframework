@@ -1,7 +1,9 @@
 import spotframework.net.user as userclass
 import spotframework.net.network as networkclass
+import spotframework.log.log as log
 
-import os, datetime
+import os
+import datetime
 
 def checkPhone():
 
@@ -35,3 +37,5 @@ if __name__ == '__main__':
         network.setShuffle(True)
         network.setVolume(os.environ['SPOTALARMVOLUME'])
         network.next()
+
+    log.dumpLog()
