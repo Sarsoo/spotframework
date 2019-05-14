@@ -8,36 +8,41 @@ import os
 
 if __name__ == '__main__':
 
-    # try:
-    if os.path.exists(os.path.join(const.config_path, 'playlists.json')):
+    try:
+        if os.path.exists(os.path.join(const.config_path, 'playlists.json')):
 
-        data = json.loadJson(os.path.join(const.config_path, 'playlists.json'))
+            data = json.loadJson(os.path.join(const.config_path, 'playlists.json'))
 
-        net = network.network(user.User())
-        playlists = net.getUserPlaylists()
+            net = network.network(user.User())
+            playlists = net.getUserPlaylists()
 
-        for tomake in data['playlists']:
+            for tomake in data['playlists']:
 
-            tracks = []
+                log.log("generatePlaylist", tomake['name'])
 
-            for part in tomake['playlists']:
+                tracks = []
 
-                play = next((i for i in playlists if i.name == part), None)
+                for part in tomake['playlists']:
 
-                if play is not None:
+                    play = next((i for i in playlists if i.name == part), None)
 
-                    if len(play.tracks) == 0:
-                        log.log("pulling tracks for {}".format(play.name))
-                        play.tracks = net.getPlaylistTracks(play.playlistid)
+                    if play is not None:
 
-                    tracks += [i for i in play.tracks if i['track']['uri'] not in [j['track']['uri'] for j in tracks]]
+                        if len(play.tracks) == 0:
+                            log.log("pulling tracks for {}".format(play.name))
+                            play.tracks = net.getPlaylistTracks(play.playlistid)
 
-                else:
-                    log.log("requested playlist {} not found".format(part))
+                        tracks += [i for i in play.tracks if i['track']['uri'] not in [j['track']['uri'] for j in tracks]]
 
-            tracks.sort(key=lambda x: x['track']['album']['release_date'], reverse=True)
+                    else:
+                        log.log("requested playlist {} not found".format(part))
 
-            net.replacePlaylistTracks(tomake['id'], [i['track']['uri'] for i in tracks])
+                tracks.sort(key=lambda x: x['track']['album']['release_date'], reverse=True)
 
-    # except:
-    #     log.dumpLog()
+                net.replacePlaylistTracks(tomake['id'], [i['track']['uri'] for i in tracks])
+        else:
+            log.log("config json not found")
+
+        log.dumpLog()
+    except:
+        log.dumpLog()
