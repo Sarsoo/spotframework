@@ -11,7 +11,13 @@ if __name__ == '__main__':
 
     network.getPlaylist('000Eh2vXzYGgrEFlgcWZj3')
 
-    network.makePlaylist('new playlist')
+    playlist = network.makePlaylist('new playlist')
+
+    network.addPlaylistTracks(playlist.playlistid, ["spotify:track:78lC4VmDVSSsCUQ0VNdQva"]*149)
+
+    network.replacePlaylistTracks(playlist.playlistid, ["spotify:track:78lC4VmDVSSsCUQ0VNdQva"] * 160)
+
+    network.pause()
 
     #network.getPlayer()
 

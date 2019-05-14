@@ -155,6 +155,17 @@ class network:
 
         req = self._makePutRequest('play', 'me/player/play', params=params, json=payload)
 
+    def pause(self, deviceid=None):
+
+        log.log("pause", deviceid)
+
+        if deviceid is not None:
+            params = {'device_id': deviceid}
+        else:
+            params = None
+
+        req = self._makePutRequest('pause', 'me/player/pause', params=params)
+
 
     def next(self, deviceid=None):
 
@@ -198,7 +209,8 @@ class network:
 
     def makePlaylist(self, name, description=None, public=True, collaborative=False):
 
-        log.log("makePlaylist", name, 'description:{}'.format(description), 'public:{}'.format(public), 'collaborative:{}'.format(collaborative))
+        log.log("makePlaylist", name, 'description:{}'.format(description), 'public:{}'.format(public),
+                'collaborative:{}'.format(collaborative))
 
         headers = {"Content-Type": "application/json"}
 
@@ -207,11 +219,49 @@ class network:
         if description is not None:
             json["description"] = description
 
-        resp = self._makePostRequest('makePlaylist', 'users/{}/playlists'.format(self.user.username), json=json, headers=headers).json()
+        req = self._makePostRequest('makePlaylist', 'users/{}/playlists'.format(self.user.username), json=json,
+                                     headers=headers)
 
-        if resp is not None:
+        if req is not None:
+            resp = req.json()
 
-            playlist = playlistclass(resp["id"], uri=resp['uri'], name=resp['name'], userid=resp['owner']['id'])
-            return playlist
+            if resp is not None:
+                playlist = playlistclass(resp["id"], uri=resp['uri'], name=resp['name'], userid=resp['owner']['id'])
+                return playlist
 
         return None
+
+    def replacePlaylistTracks(self, playlistid, uris):
+
+        log.log("replacePlaylistTracks", playlistid)
+
+        headers = {"Content-Type": "application/json"}
+
+        json = {"uris": uris[:100]}
+
+        req = self._makePutRequest('replacePlaylistTracks', 'playlists/{}/tracks'.format(playlistid), json=json,
+                                     headers=headers)
+
+        if req is not None:
+            resp = req.json()
+
+            if len(uris) > 100:
+                self.addPlaylistTracks(playlistid, uris[100:])
+
+    def addPlaylistTracks(self, playlistid, uris):
+
+        log.log("addPlaylistTracks", playlistid)
+
+        headers = {"Content-Type": "application/json"}
+
+        json = {"uris": uris[:100]}
+
+        req = self._makePostRequest('addPlaylistTracks', 'playlists/{}/tracks'.format(playlistid), json=json,
+                                     headers=headers)
+
+        if req is not None:
+            resp = req.json()
+
+            if len(uris) > 100:
+
+                self.addPlaylistTracks(playlistid, uris[100:])
