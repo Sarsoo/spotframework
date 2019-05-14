@@ -11,6 +11,8 @@ if __name__ == '__main__':
 
     network.getPlaylist('000Eh2vXzYGgrEFlgcWZj3')
 
+    network.makePlaylist('new playlist')
+
     #network.getPlayer()
 
     # playlists = network.getUserPlaylists()

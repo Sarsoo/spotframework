@@ -25,15 +25,15 @@ class network:
 
         return None
 
-    def _makePostRequest(self, method, url, params=None, headers={}):
+    def _makePostRequest(self, method, url, params=None, json=None, headers={}):
 
         headers['Authorization'] = 'Bearer ' + self.user.access_token
 
-        req = requests.post(const.api_url + url, params=params, headers=headers)
+        req = requests.post(const.api_url + url, params=params, json=json, headers=headers)
 
         if 200 <= req.status_code < 300:
             log.log(method, 'post', str(req.status_code))
-            return req.text
+            return req
         else:
             log.log(method, 'post', str(req.status_code), req.text)
 
@@ -47,7 +47,7 @@ class network:
 
         if 200 <= req.status_code < 300:
             log.log(method, 'put', str(req.status_code))
-            return req.text
+            return req
         else:
             log.log(method, 'put', str(req.status_code), req.text)
 
@@ -112,7 +112,7 @@ class network:
 
         params = {'offset': offset, 'limit': limit}
 
-        resp = self._makeGetRequest('getPlaylistTracks', 'playlists/{}/tracks'.format(playlistid), params)
+        resp = self._makeGetRequest('getPlaylistTracks', 'playlists/{}/tracks'.format(playlistid), params=params)
 
         tracks += resp['items']
 
@@ -195,3 +195,23 @@ class network:
 
         else:
             log.log("setVolume", volume, "not allowed")
+
+    def makePlaylist(self, name, description=None, public=True, collaborative=False):
+
+        log.log("makePlaylist", name, 'description:{}'.format(description), 'public:{}'.format(public), 'collaborative:{}'.format(collaborative))
+
+        headers = {"Content-Type": "application/json"}
+
+        json = {"name": name, "public": public, "collaborative": collaborative}
+
+        if description is not None:
+            json["description"] = description
+
+        resp = self._makePostRequest('makePlaylist', 'users/{}/playlists'.format(self.user.username), json=json, headers=headers).json()
+
+        if resp is not None:
+
+            playlist = playlistclass(resp["id"], uri=resp['uri'], name=resp['name'], userid=resp['owner']['id'])
+            return playlist
+
+        return None
