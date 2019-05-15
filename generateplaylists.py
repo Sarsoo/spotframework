@@ -37,7 +37,14 @@ if __name__ == '__main__':
                     else:
                         log.log("requested playlist {} not found".format(part))
 
-                tracks.sort(key=lambda x: x['track']['album']['release_date'], reverse=True)
+                if 'shuffle' in tomake:
+                    if tomake['shuffle'] is True:
+                        import random
+                        random.shuffle(tracks)
+                    else:
+                        tracks.sort(key=lambda x: x['track']['album']['release_date'], reverse=True)
+                else:
+                    tracks.sort(key=lambda x: x['track']['album']['release_date'], reverse=True)
 
                 net.replacePlaylistTracks(tomake['id'], [i['track']['uri'] for i in tracks])
         else:
