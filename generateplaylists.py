@@ -4,6 +4,8 @@ import spotframework.net.user as user
 import spotframework.log.log as log
 import spotframework.io.json as json
 
+import requests
+
 import os
 
 if __name__ == '__main__':
@@ -36,6 +38,8 @@ if __name__ == '__main__':
 
                     else:
                         log.log("requested playlist {} not found".format(part))
+                        if 'SLACKHOOK' in os.environ:
+                            requests.post(os.environ['SLACKHOOK'], json={"text": "spot playlists: {} not found".format(part)})
 
                 if 'shuffle' in tomake:
                     if tomake['shuffle'] is True:
@@ -47,8 +51,11 @@ if __name__ == '__main__':
                     tracks.sort(key=lambda x: x['track']['album']['release_date'], reverse=True)
 
                 net.replacePlaylistTracks(tomake['id'], [i['track']['uri'] for i in tracks])
+                net.changePlaylistDetails(tomake['id'], description=' / '.join(tomake['playlists']))
         else:
             log.log("config json not found")
+            if 'SLACKHOOK' in os.environ:
+                requests.post(os.environ['SLACKHOOK'], json={"text": "spot playlists: config json not found"})
 
         log.dumpLog()
     except:

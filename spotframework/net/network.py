@@ -248,6 +248,30 @@ class network:
             if len(uris) > 100:
                 self.addPlaylistTracks(playlistid, uris[100:])
 
+    def changePlaylistDetails(self, playlistid, name=None, public=None, collaborative=None, description=None):
+
+        log.log("changePlaylistDetails", playlistid)
+
+        headers = {"Content-Type": "application/json"}
+
+        json = {}
+
+        if name is not None:
+            json['name'] = name
+
+        if public is not None:
+            json['public'] = public
+
+        if collaborative is not None:
+            json['collaborative'] = collaborative
+
+        if description is not None:
+            json['description'] = description
+
+        req = self._makePutRequest('changePlaylistDetails', 'playlists/{}'.format(playlistid), json=json,
+                                     headers=headers)
+        return req
+
     def addPlaylistTracks(self, playlistid, uris):
 
         log.log("addPlaylistTracks", playlistid)
