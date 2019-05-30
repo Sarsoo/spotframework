@@ -34,7 +34,7 @@ if __name__ == '__main__':
                             log.log("pulling tracks for {}".format(play.name))
                             play.tracks = net.getPlaylistTracks(play.playlistid)
 
-                        tracks += [i for i in play.tracks if i['track']['uri'] not in [j['track']['uri'] for j in tracks]]
+                        tracks += [i for i in play.tracks if i['track']['uri'] not in [j['track']['uri'] for j in tracks] and i['is_local'] is False]
 
                     else:
                         log.log("requested playlist {} not found".format(part))
