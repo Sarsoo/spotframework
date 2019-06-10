@@ -3,6 +3,14 @@ import spotframework.net.network as network
 import spotframework.net.user as user
 import spotframework.log.log as log
 import spotframework.io.json as json
+import spotframework.util.monthstrings as monthstrings
+from spotframework.engine.playlistengine import PlaylistEngine
+from spotframework.engine.filter.shuffle import Shuffle
+from spotframework.engine.filter.sortreversereleasedate import SortReverseReleaseDate
+from spotframework.engine.filter.deduplicatebyid import DeduplicateByID
+from spotframework.engine.filter.deduplicatebyname import DeduplicateByName
+
+import datetime
 
 import requests
 
@@ -16,47 +24,58 @@ if __name__ == '__main__':
             data = json.loadJson(os.path.join(const.config_path, 'playlists.json'))
 
             net = network.network(user.User())
-            playlists = net.getUserPlaylists()
+
+            engine = PlaylistEngine(net)
+            engine.load_user_playlists()
 
             for tomake in data['playlists']:
 
-                log.log("generatePlaylist", tomake['name'])
+                log.log("makePlaylist", tomake['name'])
 
-                tracks = []
-
-                for part in tomake['playlists']:
-
-                    play = next((i for i in playlists if i.name == part), None)
-
-                    if play is not None:
-
-                        if len(play.tracks) == 0:
-                            log.log("pulling tracks for {}".format(play.name))
-                            play.tracks = net.getPlaylistTracks(play.playlistid)
-
-                        tracks += [i for i in play.tracks if i['track']['uri'] not in [j['track']['uri'] for j in tracks] and i['is_local'] is False]
-
-                    else:
-                        log.log("requested playlist {} not found".format(part))
-                        if 'SLACKHOOK' in os.environ:
-                            requests.post(os.environ['SLACKHOOK'], json={"text": "spot playlists: {} not found".format(part)})
+                processors = [DeduplicateByID()]
 
                 if 'shuffle' in tomake:
                     if tomake['shuffle'] is True:
-                        import random
-                        random.shuffle(tracks)
+                        processors.append(Shuffle())
                     else:
-                        tracks.sort(key=lambda x: x['track']['album']['release_date'], reverse=True)
+                        processors.append(SortReverseReleaseDate())
                 else:
-                    tracks.sort(key=lambda x: x['track']['album']['release_date'], reverse=True)
+                    processors.append(SortReverseReleaseDate())
 
-                net.replacePlaylistTracks(tomake['id'], [i['track']['uri'] for i in tracks])
-                net.changePlaylistDetails(tomake['id'], description=' / '.join(tomake['playlists']))
+                tracks = engine.make_playlist(tomake['playlists'], processors)
+
+                engine.execute_playlist(tracks, tomake['id'])
+                engine.change_description(tomake['playlists'], tomake['id'])
+
+            if 'recents' in data:
+                recents_id = data['recents']['id']
+                boundary_date = datetime.datetime.now() - datetime.timedelta(days=data['recents']['boundary'])
+
+                recent_parts = []
+
+                for playlist in [i for i in data['playlists'] if 'include_in_recents' in i]:
+                    if playlist['include_in_recents']:
+                        recent_parts += [i for i in playlist['playlists']]
+
+                if 'playlists' in data['recents']:
+                    recent_parts += data['recents']['playlists']
+
+                processors = [DeduplicateByName(), SortReverseReleaseDate()]
+
+                recent_tracks = engine.get_recent_playlist(boundary_date, recent_parts, processors)
+                engine.execute_playlist(recent_tracks, data['recents']['id'])
+                engine.change_description([monthstrings.get_this_month(),
+                                           monthstrings.get_last_month()]
+                                          , data['recents']['id'])
+
         else:
             log.log("config json not found")
             if 'SLACKHOOK' in os.environ:
                 requests.post(os.environ['SLACKHOOK'], json={"text": "spot playlists: config json not found"})
 
         log.dumpLog()
-    except:
+    except Exception:
+        log.log("exception occured")
+        if 'SLACKHOOK' in os.environ:
+            requests.post(os.environ['SLACKHOOK'], json={"text": "spot playlists: exception occured"})
         log.dumpLog()

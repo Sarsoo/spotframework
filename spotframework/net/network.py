@@ -1,6 +1,6 @@
 import requests
 from . import const
-from spotframework.model.playlist import playlist as playlistclass
+from spotframework.model.playlist import Playlist as playlistclass
 import spotframework.log.log as log
 
 limit = 50
