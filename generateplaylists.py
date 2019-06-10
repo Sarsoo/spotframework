@@ -53,9 +53,16 @@ if __name__ == '__main__':
 
                 recent_parts = []
 
-                for playlist in [i for i in data['playlists'] if 'include_in_recents' in i]:
-                    if playlist['include_in_recents']:
-                        recent_parts += [i for i in playlist['playlists']]
+                if 'use_marked_playlists' in data['recents']:
+                    if data['recents']['use_marked_playlists']:
+                        for playlist in [i for i in data['playlists'] if 'include_in_recents' in i]:
+                            if playlist['include_in_recents']:
+                                recent_parts += [i for i in playlist['playlists']]
+
+                else:
+                    for playlist in [i for i in data['playlists'] if 'include_in_recents' in i]:
+                        if playlist['include_in_recents']:
+                            recent_parts += [i for i in playlist['playlists']]
 
                 if 'playlists' in data['recents']:
                     recent_parts += data['recents']['playlists']
