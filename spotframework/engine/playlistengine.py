@@ -45,7 +45,6 @@ class PlaylistEngine:
 
             else:
                 log.log("requested playlist {} not found".format(part))
-            if play is not None:
                 if 'SLACKHOOK' in os.environ:
                     requests.post(os.environ['SLACKHOOK'], json={"text": "spot playlists: {} not found".format(part)})
 
