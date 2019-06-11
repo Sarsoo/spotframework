@@ -1,6 +1,6 @@
 import spotframework.net.const as const
-import spotframework.net.network as network
-import spotframework.net.user as user
+from spotframework.net.network import Network
+from spotframework.net.user import User
 import spotframework.log.log as log
 import spotframework.io.json as json
 import spotframework.util.monthstrings as monthstrings
@@ -21,9 +21,9 @@ if __name__ == '__main__':
     try:
         if os.path.exists(os.path.join(const.config_path, 'playlists.json')):
 
-            data = json.loadJson(os.path.join(const.config_path, 'playlists.json'))
+            data = json.load_json(os.path.join(const.config_path, 'playlists.json'))
 
-            net = network.network(user.User())
+            net = Network(User())
 
             engine = PlaylistEngine(net)
             engine.load_user_playlists()
@@ -80,9 +80,9 @@ if __name__ == '__main__':
             if 'SLACKHOOK' in os.environ:
                 requests.post(os.environ['SLACKHOOK'], json={"text": "spot playlists: config json not found"})
 
-        log.dumpLog()
-    except Exception:
+        log.dump_log()
+    except:
         log.log("exception occured")
         if 'SLACKHOOK' in os.environ:
             requests.post(os.environ['SLACKHOOK'], json={"text": "spot playlists: exception occured"})
-        log.dumpLog()
+        log.dump_log()

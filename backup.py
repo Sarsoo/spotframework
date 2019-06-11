@@ -1,5 +1,5 @@
-import spotframework.net.user as userclass
-import spotframework.net.network as networkclass
+from  spotframework.net.user import User
+from  spotframework.net.network import Network
 import spotframework.io.csv as csvwrite
 import spotframework.log.log as log
 
@@ -11,11 +11,11 @@ if __name__ == '__main__':
 
     try:
 
-        network = networkclass.network(userclass.User())
-        playlists = network.getUserPlaylists()
+        network = Network(User())
+        playlists = network.get_user_playlists()
 
         for playlist in playlists:
-            playlist.tracks = network.getPlaylistTracks(playlist.playlistid)
+            playlist.tracks = network.get_playlist_tracks(playlist.playlistid)
 
         path = sys.argv[1]
 
@@ -27,9 +27,9 @@ if __name__ == '__main__':
             os.makedirs(totalpath)
 
         for play in playlists:
-            csvwrite.exportPlaylist(play, totalpath)
+            csvwrite.export_playlist(play, totalpath)
 
-        log.dumpLog()
+        log.dump_log()
 
     except:
-        log.dumpLog()
+        log.dump_log()

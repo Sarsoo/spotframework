@@ -1,19 +1,19 @@
 import requests
 from . import const
-from spotframework.model.playlist import Playlist as playlistclass
+from spotframework.model.playlist import Playlist
 import spotframework.log.log as log
 
 limit = 50
 
 
-class network:
+class Network:
 
     def __init__(self, user):
         self.user = user
 
-    def _makeGetRequest(self, method, url, params=None, headers={}):
+    def _make_get_request(self, method, url, params=None, headers={}):
 
-        headers['Authorization'] = 'Bearer ' + self.user.access_token
+        headers['Authorization'] = 'Bearer ' + self.user.accesstoken
 
         req = requests.get(const.api_url + url, params=params, headers=headers)
 
@@ -25,9 +25,9 @@ class network:
 
         return None
 
-    def _makePostRequest(self, method, url, params=None, json=None, headers={}):
+    def _make_post_request(self, method, url, params=None, json=None, headers={}):
 
-        headers['Authorization'] = 'Bearer ' + self.user.access_token
+        headers['Authorization'] = 'Bearer ' + self.user.accesstoken
 
         req = requests.post(const.api_url + url, params=params, json=json, headers=headers)
 
@@ -39,9 +39,9 @@ class network:
 
         return None
 
-    def _makePutRequest(self, method, url, params=None, json=None, headers={}):
+    def _make_put_request(self, method, url, params=None, json=None, headers={}):
 
-        headers['Authorization'] = 'Bearer ' + self.user.access_token
+        headers['Authorization'] = 'Bearer ' + self.user.accesstoken
 
         req = requests.put(const.api_url + url, params=params, json=json, headers=headers)
 
@@ -53,14 +53,13 @@ class network:
 
         return None
 
-
-    def getPlaylist(self, playlistid, tracksonly=False):
+    def get_playlist(self, playlistid, tracksonly=False):
 
         log.log("getPlaylist", playlistid)
 
-        tracks = self.getPlaylistTracks(playlistid)
+        tracks = self.get_playlist_tracks(playlistid)
 
-        playlist = playlistclass(playlistid)
+        playlist = Playlist(playlistid)
         playlist.tracks += tracks
 
         if not tracksonly:
@@ -68,7 +67,7 @@ class network:
 
         return playlist
 
-    def getPlaylists(self, offset=0):
+    def get_playlists(self, offset=0):
 
         log.log("getPlaylists", offset)
 
@@ -76,35 +75,35 @@ class network:
 
         params = {'offset': offset, 'limit': limit}
 
-        resp = self._makeGetRequest('getPlaylists', 'me/playlists', params=params)
+        resp = self._make_get_request('getPlaylists', 'me/playlists', params=params)
 
         if resp:
 
             for responseplaylist in resp['items']:
 
-                playlist = playlistclass(responseplaylist['id'], responseplaylist['uri'])
+                playlist = Playlist(responseplaylist['id'], responseplaylist['uri'])
                 playlist.name = responseplaylist['name']
                 playlist.userid = responseplaylist['owner']['id']
 
                 playlists.append(playlist)
 
-            #playlists = playlists + resp['items']
+            # playlists = playlists + resp['items']
 
             if resp['next']:
-                playlists += self.getPlaylists(offset + limit)
+                playlists += self.get_playlists(offset + limit)
 
             return playlists
 
         else:
             return None
 
-    def getUserPlaylists(self):
+    def get_user_playlists(self):
 
         log.log("getUserPlaylists")
 
-        return list(filter(lambda x: x.userid == self.user.username, self.getPlaylists()))
+        return list(filter(lambda x: x.userid == self.user.username, self.get_playlists()))
 
-    def getPlaylistTracks(self, playlistid, offset=0):
+    def get_playlist_tracks(self, playlistid, offset=0):
 
         log.log("getPlaylistTracks", playlistid, offset)
 
@@ -112,35 +111,32 @@ class network:
 
         params = {'offset': offset, 'limit': limit}
 
-        resp = self._makeGetRequest('getPlaylistTracks', 'playlists/{}/tracks'.format(playlistid), params=params)
+        resp = self._make_get_request('getPlaylistTracks', 'playlists/{}/tracks'.format(playlistid), params=params)
 
         tracks += resp['items']
 
         if resp['next']:
-            tracks += self.getPlaylistTracks(playlistid, offset + limit)
+            tracks += self.get_playlist_tracks(playlistid, offset + limit)
 
         return tracks
 
-
-    def getAvailableDevices(self):
+    def get_available_devices(self):
 
         log.log("getAvailableDevices")
 
-        return self._makeGetRequest('getAvailableDevices', 'me/player/devices')
+        return self._make_get_request('getAvailableDevices', 'me/player/devices')
 
-
-    def getPlayer(self):
+    def get_player(self):
 
         log.log("getPlayer")
 
-        return self._makeGetRequest('getPlayer', 'me/player')
+        return self._make_get_request('getPlayer', 'me/player')
 
-
-    def getDeviceID(self, devicename):
+    def get_device_id(self, devicename):
 
         log.log("getDeviceID", devicename)
 
-        return next((i for i in self.getAvailableDevices()['devices'] if i['name'] == devicename), None)['id']
+        return next((i for i in self.get_available_devices()['devices'] if i['name'] == devicename), None)['id']
 
     def play(self, uri, deviceid=None):
 
@@ -153,7 +149,7 @@ class network:
 
         payload = {'context_uri': uri}
 
-        req = self._makePutRequest('play', 'me/player/play', params=params, json=payload)
+        req = self._make_put_request('play', 'me/player/play', params=params, json=payload)
 
     def pause(self, deviceid=None):
 
@@ -164,8 +160,7 @@ class network:
         else:
             params = None
 
-        req = self._makePutRequest('pause', 'me/player/pause', params=params)
-
+        req = self._make_put_request('pause', 'me/player/pause', params=params)
 
     def next(self, deviceid=None):
 
@@ -176,10 +171,9 @@ class network:
         else:
             params = None
 
-        req = self._makePostRequest('next', 'me/player/next', params=params)
+        req = self._make_post_request('next', 'me/player/next', params=params)
 
-
-    def setShuffle(self, state, deviceid=None):
+    def set_shuffle(self, state, deviceid=None):
 
         log.log("setShuffle", state, deviceid)
 
@@ -188,10 +182,9 @@ class network:
         if deviceid is not None:
             params['device_id'] = deviceid
 
-        req = self._makePutRequest('setShuffle', 'me/player/shuffle', params=params)
+        req = self._make_put_request('setShuffle', 'me/player/shuffle', params=params)
 
-
-    def setVolume(self, volume, deviceid=None):
+    def set_volume(self, volume, deviceid=None):
 
         log.log("setVolume", volume, deviceid)
 
@@ -202,12 +195,12 @@ class network:
             if deviceid is not None:
                 params['device_id'] = deviceid
 
-            req = self._makePutRequest('setVolume', 'me/player/volume', params=params)
+            req = self._make_put_request('setVolume', 'me/player/volume', params=params)
 
         else:
             log.log("setVolume", volume, "not allowed")
 
-    def makePlaylist(self, name, description=None, public=True, collaborative=False):
+    def make_playlist(self, name, description=None, public=True, collaborative=False):
 
         log.log("makePlaylist", name, 'description:{}'.format(description), 'public:{}'.format(public),
                 'collaborative:{}'.format(collaborative))
@@ -219,19 +212,19 @@ class network:
         if description is not None:
             json["description"] = description
 
-        req = self._makePostRequest('makePlaylist', 'users/{}/playlists'.format(self.user.username), json=json,
-                                     headers=headers)
+        req = self._make_post_request('makePlaylist', 'users/{}/playlists'.format(self.user.username), json=json,
+                                      headers=headers)
 
         if req is not None:
             resp = req.json()
 
             if resp is not None:
-                playlist = playlistclass(resp["id"], uri=resp['uri'], name=resp['name'], userid=resp['owner']['id'])
+                playlist = Playlist(resp["id"], uri=resp['uri'], name=resp['name'], userid=resp['owner']['id'])
                 return playlist
 
         return None
 
-    def replacePlaylistTracks(self, playlistid, uris):
+    def replace_playlist_tracks(self, playlistid, uris):
 
         log.log("replacePlaylistTracks", playlistid)
 
@@ -239,16 +232,16 @@ class network:
 
         json = {"uris": uris[:100]}
 
-        req = self._makePutRequest('replacePlaylistTracks', 'playlists/{}/tracks'.format(playlistid), json=json,
+        req = self._make_put_request('replacePlaylistTracks', 'playlists/{}/tracks'.format(playlistid), json=json,
                                      headers=headers)
 
         if req is not None:
             resp = req.json()
 
             if len(uris) > 100:
-                self.addPlaylistTracks(playlistid, uris[100:])
+                self.add_playlist_tracks(playlistid, uris[100:])
 
-    def changePlaylistDetails(self, playlistid, name=None, public=None, collaborative=None, description=None):
+    def change_playlist_details(self, playlistid, name=None, public=None, collaborative=None, description=None):
 
         log.log("changePlaylistDetails", playlistid)
 
@@ -268,11 +261,11 @@ class network:
         if description is not None:
             json['description'] = description
 
-        req = self._makePutRequest('changePlaylistDetails', 'playlists/{}'.format(playlistid), json=json,
+        req = self._make_put_request('changePlaylistDetails', 'playlists/{}'.format(playlistid), json=json,
                                      headers=headers)
         return req
 
-    def addPlaylistTracks(self, playlistid, uris):
+    def add_playlist_tracks(self, playlistid, uris):
 
         log.log("addPlaylistTracks", playlistid)
 
@@ -280,12 +273,12 @@ class network:
 
         json = {"uris": uris[:100]}
 
-        req = self._makePostRequest('addPlaylistTracks', 'playlists/{}/tracks'.format(playlistid), json=json,
-                                     headers=headers)
+        req = self._make_post_request('addPlaylistTracks', 'playlists/{}/tracks'.format(playlistid), json=json,
+                                      headers=headers)
 
         if req is not None:
             resp = req.json()
 
             if len(uris) > 100:
 
-                self.addPlaylistTracks(playlistid, uris[100:])
+                self.add_playlist_tracks(playlistid, uris[100:])

@@ -11,7 +11,7 @@ if __name__ == '__main__':
 
     # print(data)
 
-    network = networkclass.network(userclass.User())
+    network = networkclass.Network(userclass.User())
 
     # tracks = network.getPlaylistTracks("76ynkbkyc4uq11u1FcpOyG")
 

@@ -5,7 +5,8 @@ import spotframework.log.log as log
 
 headers = ['name', 'artist', 'album', 'album artist', 'added', 'track id', 'album id', 'added by']
 
-def exportPlaylist(playlist, path, name=None):
+
+def export_playlist(playlist, path, name=None):
 
     log.log('exportPlaylist', playlist.name, path, name)
     

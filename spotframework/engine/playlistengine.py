@@ -14,14 +14,14 @@ class PlaylistEngine:
         self.net = net
 
     def load_user_playlists(self):
-        self.playlists = self.net.getUserPlaylists()
+        self.playlists = self.net.get_user_playlists()
 
     def append_user_playlists(self):
-        self.playlists += self.net.getUserPlaylists()
+        self.playlists += self.net.get_user_playlists()
 
     def get_playlist_tracks(self, playlist):
         log.log("pulling tracks for {}".format(playlist.name))
-        playlist.tracks = self.net.getPlaylistTracks(playlist.playlistid)
+        playlist.tracks = self.net.get_playlist_tracks(playlist.playlistid)
 
     def make_playlist(self, playlist_parts, processors=[]):
 
@@ -65,7 +65,7 @@ class PlaylistEngine:
         return self.make_playlist(recent_playlist_parts + [this_month, last_month], processors)
 
     def execute_playlist(self, tracks, playlist_id):
-        self.net.replacePlaylistTracks(playlist_id, [i['track']['uri'] for i in tracks])
+        self.net.replace_playlist_tracks(playlist_id, [i['track']['uri'] for i in tracks])
 
     def change_description(self, playlistparts, playlist_id):
-        self.net.changePlaylistDetails(playlist_id, description=' / '.join(playlistparts))
+        self.net.change_playlist_details(playlist_id, description=' / '.join(playlistparts))

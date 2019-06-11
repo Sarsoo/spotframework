@@ -5,34 +5,32 @@ from base64 import b64encode
 client_id = os.environ['SPOTCLIENT']
 client_secret = os.environ['SPOTSECRET']
 
+
 class User:
 
     def __init__(self):
-        self.access_token = os.environ['SPOTACCESS']
-        self.refresh_token = os.environ['SPOTREFRESH']
+        self.accesstoken = os.environ['SPOTACCESS']
+        self.refreshtoken = os.environ['SPOTREFRESH']
         
-        self.refreshToken()
+        self.refresh_token()
 
-        self.username = self.getInfo()['id']
+        self.username = self.get_info()['id']
 
-    def refreshToken(self):
+    def refresh_token(self):
         
         idsecret = b64encode(bytes(client_id + ':' + client_secret, "utf-8")).decode("ascii")
-        headers = { 'Authorization' : 'Basic %s' %  idsecret }
+        headers = {'Authorization': 'Basic %s' % idsecret}
 
-        data = {"grant_type": "refresh_token", "refresh_token": self.refresh_token}
+        data = {"grant_type": "refresh_token", "refresh_token": self.refreshtoken}
     
-        req = requests.post('https://accounts.spotify.com/api/token', data = data, headers = headers )
+        req = requests.post('https://accounts.spotify.com/api/token', data=data, headers=headers)
    
-        #print(req.status_code)
-        #print(req.text)
-        
         if req.status_code is 200:
-            self.access_token = req.json()['access_token']
+            self.accesstoken = req.json()['access_token']
 
-    def getInfo(self):
+    def get_info(self):
         
-        headers = { 'Authorization' : 'Bearer %s' %  self.access_token }
+        headers = {'Authorization': 'Bearer %s' % self.accesstoken}
 
-        req = requests.get('https://api.spotify.com/v1/me', headers = headers)
+        req = requests.get('https://api.spotify.com/v1/me', headers=headers)
         return req.json()

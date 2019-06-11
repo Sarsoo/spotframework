@@ -3,7 +3,8 @@ import os
 
 import spotframework.log.log as log
 
-def loadJson(path):
+
+def load_json(path):
 
     log.log("load json", path)
 

@@ -5,6 +5,7 @@ import spotframework.net.const as const
 
 logentries = []
 
+
 def log(entry, *args):
 
     timestamp = datetime.datetime.now()
@@ -15,7 +16,8 @@ def log(entry, *args):
 
     print(output)
 
-def dumpLog():
+
+def dump_log():
 
     if not os.path.exists(os.path.join(const.config_path, 'log')):
         os.makedirs(os.path.join(const.config_path, 'log'))
