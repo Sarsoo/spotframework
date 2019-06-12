@@ -10,70 +10,106 @@ from spotframework.engine.filter.sortreversereleasedate import SortReverseReleas
 from spotframework.engine.filter.deduplicatebyid import DeduplicateByID
 from spotframework.engine.filter.deduplicatebyname import DeduplicateByName
 
+import os
 import datetime
+import sys
 
 import requests
 
-import os
 
-if __name__ == '__main__':
+def update_super_playlist(engine, data_dict):
+
+    log.log("makePlaylist", data_dict['name'])
+
+    processors = [DeduplicateByID()]
+
+    if 'shuffle' in data_dict:
+        if data_dict['shuffle'] is True:
+            processors.append(Shuffle())
+        else:
+            processors.append(SortReverseReleaseDate())
+    else:
+        processors.append(SortReverseReleaseDate())
+
+    tracks = engine.make_playlist(data_dict['playlists'], processors)
+
+    engine.execute_playlist(tracks, data_dict['id'])
+    engine.change_description(data_dict['playlists'], data_dict['id'])
+
+
+def update_recents_playlist(engine, data):
+
+    recents_id = data['recents']['id']
+    boundary_date = datetime.datetime.now() - datetime.timedelta(days=data['recents']['boundary'])
+
+    recent_parts = []
+
+    if 'use_marked_playlists' in data['recents']:
+        if data['recents']['use_marked_playlists']:
+            for playlist in [i for i in data['playlists'] if 'include_in_recents' in i]:
+                if playlist['include_in_recents']:
+                    recent_parts += [i for i in playlist['playlists']]
+
+    else:
+        for playlist in [i for i in data['playlists'] if 'include_in_recents' in i]:
+            if playlist['include_in_recents']:
+                recent_parts += [i for i in playlist['playlists']]
+
+    if 'playlists' in data['recents']:
+        recent_parts += data['recents']['playlists']
+
+    processors = [DeduplicateByName(), SortReverseReleaseDate()]
+
+    recent_tracks = engine.get_recent_playlist(boundary_date, recent_parts, processors)
+    engine.execute_playlist(recent_tracks, recents_id)
+    engine.change_description([monthstrings.get_this_month(), monthstrings.get_last_month()], data['recents']['id'])
+
+
+def go():
 
     try:
         if os.path.exists(os.path.join(const.config_path, 'playlists.json')):
 
             data = json.load_json(os.path.join(const.config_path, 'playlists.json'))
 
+            to_execute = []
+            not_found = []
+
+            available_specials = ['recents']
+            specials_to_execute = []
+
+            if len(sys.argv) > 1:
+                for arg in sys.argv[1:]:
+                    for playlist in data['playlists']:
+                        if arg.lower() == playlist['name'].lower():
+                            to_execute.append(playlist)
+                            break
+                    else:
+                        if arg in available_specials:
+                            specials_to_execute.append(arg)
+                        else:
+                            not_found.append(arg)
+            else:
+                to_execute = data['playlists']
+                specials_to_execute = ['recents']
+
+            if len(not_found) > 0:
+                log.log('arg not found', not_found)
+
+            if len(to_execute) <= 0 and len(specials_to_execute) <= 0:
+                log.log('none to execute, terminating')
+                return
+
             net = Network(User())
 
             engine = PlaylistEngine(net)
             engine.load_user_playlists()
 
-            for tomake in data['playlists']:
+            for super_playlist in to_execute:
+                update_super_playlist(engine, super_playlist)
 
-                log.log("makePlaylist", tomake['name'])
-
-                processors = [DeduplicateByID()]
-
-                if 'shuffle' in tomake:
-                    if tomake['shuffle'] is True:
-                        processors.append(Shuffle())
-                    else:
-                        processors.append(SortReverseReleaseDate())
-                else:
-                    processors.append(SortReverseReleaseDate())
-
-                tracks = engine.make_playlist(tomake['playlists'], processors)
-
-                engine.execute_playlist(tracks, tomake['id'])
-                engine.change_description(tomake['playlists'], tomake['id'])
-
-            if 'recents' in data:
-                recents_id = data['recents']['id']
-                boundary_date = datetime.datetime.now() - datetime.timedelta(days=data['recents']['boundary'])
-
-                recent_parts = []
-
-                if 'use_marked_playlists' in data['recents']:
-                    if data['recents']['use_marked_playlists']:
-                        for playlist in [i for i in data['playlists'] if 'include_in_recents' in i]:
-                            if playlist['include_in_recents']:
-                                recent_parts += [i for i in playlist['playlists']]
-
-                else:
-                    for playlist in [i for i in data['playlists'] if 'include_in_recents' in i]:
-                        if playlist['include_in_recents']:
-                            recent_parts += [i for i in playlist['playlists']]
-
-                if 'playlists' in data['recents']:
-                    recent_parts += data['recents']['playlists']
-
-                processors = [DeduplicateByName(), SortReverseReleaseDate()]
-
-                recent_tracks = engine.get_recent_playlist(boundary_date, recent_parts, processors)
-                engine.execute_playlist(recent_tracks, data['recents']['id'])
-                engine.change_description([monthstrings.get_this_month(),
-                                           monthstrings.get_last_month()]
-                                          , data['recents']['id'])
+            if 'recents' in data and 'recents' in specials_to_execute:
+                update_recents_playlist(engine, data)
 
         else:
             log.log("config json not found")
@@ -86,3 +122,7 @@ if __name__ == '__main__':
         if 'SLACKHOOK' in os.environ:
             requests.post(os.environ['SLACKHOOK'], json={"text": "spot playlists: exception occured"})
         log.dump_log()
+
+
+if __name__ == '__main__':
+    go()
