@@ -58,6 +58,10 @@ def update_recents_playlist(engine, data):
     if 'playlists' in data['recents']:
         recent_parts += data['recents']['playlists']
 
+    if 'exclude' in data['recents']:
+        for exclusion in data['recents']['exclude']:
+            recent_parts.remove(exclusion)
+
     processors = [DeduplicateByName(), SortReverseReleaseDate()]
 
     recent_tracks = engine.get_recent_playlist(boundary_date, recent_parts, processors)
@@ -68,9 +72,9 @@ def update_recents_playlist(engine, data):
 def go():
 
     try:
-        if os.path.exists(os.path.join(const.config_path, 'playlists.json')):
+        if os.path.exists(os.path.join(const.config_path, 'config.json')):
 
-            data = json.load_json(os.path.join(const.config_path, 'playlists.json'))
+            data = json.load_json(os.path.join(const.config_path, 'config.json'))
 
             to_execute = []
             not_found = []

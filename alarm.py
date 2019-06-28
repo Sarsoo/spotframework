@@ -1,6 +1,8 @@
 from spotframework.net.user import User
 from spotframework.net.network import Network
 import spotframework.log.log as log
+import spotframework.net.const as const
+import spotframework.io.json as json
 
 import os
 import datetime
@@ -31,17 +33,23 @@ if __name__ == '__main__':
 
         if found:
 
-            date = datetime.datetime.now()
+            if os.path.exists(os.path.join(const.config_path, 'config.json')):
+                data = json.load_json(os.path.join(const.config_path, 'config.json'))
 
-            playlists = network.get_user_playlists()
+                date = datetime.datetime.now()
 
-            playlisturi = next((i.uri for i in playlists if i.name == date.strftime("%B %-y").lower()), os.environ['SPOTALARMURI'])
+                playlists = network.get_user_playlists()
 
-            network.play(playlisturi, network.get_device_id(os.environ['SPOTALARMDEVICENAME']))
+                if data['alarm']['use_month']:
+                    playlisturi = next((i.uri for i in playlists if i.name == date.strftime("%B %-y").lower()), data['alarm']['uri'])
+                else:
+                    playlisturi = data['alarm']['uri']
 
-            network.set_shuffle(True)
-            network.set_volume(os.environ['SPOTALARMVOLUME'])
-            network.next()
+                network.play(playlisturi, network.get_device_id(data['alarm']['device_name']))
+
+                network.set_shuffle(True)
+                network.set_volume(data['alarm']['volume'])
+                network.next()
 
         log.dump_log()
 

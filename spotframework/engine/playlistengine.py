@@ -58,7 +58,7 @@ class PlaylistEngine:
         this_month = monthstrings.get_this_month()
         last_month = monthstrings.get_last_month()
 
-        datefilter = AddedSince(boundary_date, recent_playlist_parts)
+        datefilter = AddedSince(boundary_date, recent_playlist_parts + [last_month])
 
         processors.append(datefilter)
 

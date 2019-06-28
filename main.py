@@ -7,7 +7,7 @@ import spotframework.io.json as json
 if __name__ == '__main__':
     print('hello world')
 
-    # data = json.loadJson('.spot/playlists.json')
+    # data = json.loadJson('.spot/config.json')
 
     # print(data)
 
