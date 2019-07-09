@@ -121,10 +121,10 @@ def go():
                 requests.post(os.environ['SLACKHOOK'], json={"text": "spot playlists: config json not found"})
 
         log.dump_log()
-    except:
-        log.log("exception occured")
+    except Exception as e:
+        log.log("exception occured", e)
         if 'SLACKHOOK' in os.environ:
-            requests.post(os.environ['SLACKHOOK'], json={"text": "spot playlists: exception occured"})
+            requests.post(os.environ['SLACKHOOK'], json={"text": f"spot playlists: exception occured {e}"})
         log.dump_log()
 
 

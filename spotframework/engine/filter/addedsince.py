@@ -5,7 +5,7 @@ import datetime
 class AddedSince(AbstractProcessor):
 
     def __init__(self, boundary, names=[]):
-        self.playlist_names = names
+        super().__init__(names)
         self.boundary = boundary
 
     def check_date(self, track):

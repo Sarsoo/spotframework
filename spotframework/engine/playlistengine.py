@@ -20,7 +20,7 @@ class PlaylistEngine:
         self.playlists += self.net.get_user_playlists()
 
     def get_playlist_tracks(self, playlist):
-        log.log("pulling tracks for {}".format(playlist.name))
+        log.log(f"pulling tracks for {playlist.name}")
         playlist.tracks = self.net.get_playlist_tracks(playlist.playlistid)
 
     def make_playlist(self, playlist_parts, processors=[]):
@@ -44,9 +44,9 @@ class PlaylistEngine:
                 tracks += [i for i in playlist_tracks if i['is_local'] is False]
 
             else:
-                log.log("requested playlist {} not found".format(part))
+                log.log(f"requested playlist {part} not found")
                 if 'SLACKHOOK' in os.environ:
-                    requests.post(os.environ['SLACKHOOK'], json={"text": "spot playlists: {} not found".format(part)})
+                    requests.post(os.environ['SLACKHOOK'], json={"text": f"spot playlists: {part} not found"})
 
         for processor in [i for i in processors if len(i.playlist_names) <= 0]:
             tracks = processor.process(tracks)
