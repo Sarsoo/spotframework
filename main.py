@@ -1,36 +1,14 @@
-import spotframework.net.user as userclass
-import spotframework.net.network as networkclass
-import spotframework.net.network as playlist
 
-import spotframework.io.json as json
 
-if __name__ == '__main__':
-    print('hello world')
+def run_user_playlist(event, context):
 
-    # data = json.loadJson('.spot/config.json')
+    import base64
 
-    # print(data)
+    name = base64.b64decode(event['data']).decode('utf-8')
+    username = event['attributes']['username']
 
-    network = networkclass.Network(userclass.User())
+    print(f'{username} - {name}')
 
-    # tracks = network.getPlaylistTracks("76ynkbkyc4uq11u1FcpOyG")
+    from spotframework.google.run_user_playlist import run_user_playlist as run
 
-    # print(tracks[0])
-
-    # network.setVolume(105)
-
-    # network.getPlaylist('000Eh2vXzYGgrEFlgcWZj3')
-    #
-    # playlist = network.makePlaylist('new playlist')
-    #
-    # network.addPlaylistTracks(playlist.playlistid, ["spotify:track:78lC4VmDVSSsCUQ0VNdQva"]*149)
-    #
-    # network.replacePlaylistTracks(playlist.playlistid, ["spotify:track:78lC4VmDVSSsCUQ0VNdQva"] * 160)
-    #
-    # network.pause()
-
-    #network.getPlayer()
-
-    # playlists = network.getUserPlaylists()
-    # for playlist in playlists:
-    #     print(playlist.name + ' ' + playlist.playlistid)
+    run(username, name)

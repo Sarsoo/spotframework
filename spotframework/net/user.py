@@ -1,24 +1,23 @@
-import os
 import requests
 from base64 import b64encode
-
-client_id = os.environ['SPOTCLIENT']
-client_secret = os.environ['SPOTSECRET']
 
 
 class User:
 
-    def __init__(self):
-        self.accesstoken = os.environ['SPOTACCESS']
-        self.refreshtoken = os.environ['SPOTREFRESH']
-        
+    def __init__(self, client_id, client_secret, access_token, refresh_token):
+        self.accesstoken = access_token
+        self.refreshtoken = refresh_token
+
+        self.client_id = client_id
+        self.client_secret = client_secret
+
         self.refresh_token()
 
         self.username = self.get_info()['id']
 
     def refresh_token(self):
         
-        idsecret = b64encode(bytes(client_id + ':' + client_secret, "utf-8")).decode("ascii")
+        idsecret = b64encode(bytes(self.client_id + ':' + self.client_secret, "utf-8")).decode("ascii")
         headers = {'Authorization': 'Basic %s' % idsecret}
 
         data = {"grant_type": "refresh_token", "refresh_token": self.refreshtoken}

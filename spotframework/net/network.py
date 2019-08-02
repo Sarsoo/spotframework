@@ -111,7 +111,7 @@ class Network:
 
         params = {'offset': offset, 'limit': limit}
 
-        resp = self._make_get_request('getPlaylistTracks', 'playlists/{}/tracks'.format(playlistid), params=params)
+        resp = self._make_get_request('getPlaylistTracks', f'playlists/{playlistid}/tracks', params=params)
 
         tracks += resp['items']
 
@@ -202,8 +202,7 @@ class Network:
 
     def make_playlist(self, name, description=None, public=True, collaborative=False):
 
-        log.log("makePlaylist", name, 'description:{}'.format(description), 'public:{}'.format(public),
-                'collaborative:{}'.format(collaborative))
+        log.log("makePlaylist", name, f'description:{description}', f'public:{public}', f'collaborative:{collaborative}')
 
         headers = {"Content-Type": "application/json"}
 
@@ -212,8 +211,7 @@ class Network:
         if description is not None:
             json["description"] = description
 
-        req = self._make_post_request('makePlaylist', 'users/{}/playlists'.format(self.user.username), json=json,
-                                      headers=headers)
+        req = self._make_post_request('makePlaylist', f'users/{self.user.username}/playlists', json=json, headers=headers)
 
         if req is not None:
             resp = req.json()
@@ -232,8 +230,7 @@ class Network:
 
         json = {"uris": uris[:100]}
 
-        req = self._make_put_request('replacePlaylistTracks', 'playlists/{}/tracks'.format(playlistid), json=json,
-                                     headers=headers)
+        req = self._make_put_request('replacePlaylistTracks', f'playlists/{playlistid}/tracks', json=json, headers=headers)
 
         if req is not None:
             resp = req.json()
@@ -261,8 +258,7 @@ class Network:
         if description is not None:
             json['description'] = description
 
-        req = self._make_put_request('changePlaylistDetails', 'playlists/{}'.format(playlistid), json=json,
-                                     headers=headers)
+        req = self._make_put_request('changePlaylistDetails', f'playlists/{playlistid}', json=json, headers=headers)
         return req
 
     def add_playlist_tracks(self, playlistid, uris):
@@ -273,8 +269,7 @@ class Network:
 
         json = {"uris": uris[:100]}
 
-        req = self._make_post_request('addPlaylistTracks', 'playlists/{}/tracks'.format(playlistid), json=json,
-                                      headers=headers)
+        req = self._make_post_request('addPlaylistTracks', f'playlists/{playlistid}/tracks', json=json, headers=headers)
 
         if req is not None:
             resp = req.json()

@@ -104,7 +104,10 @@ def go():
                 log.log('none to execute, terminating')
                 return
 
-            net = Network(User())
+            net = Network(User(os.environ['SPOTCLIENT'],
+                               os.environ['SPOTSECRET'],
+                               os.environ['SPOTACCESS'],
+                               os.environ['SPOTREFRESH']))
 
             engine = PlaylistEngine(net)
             engine.load_user_playlists()

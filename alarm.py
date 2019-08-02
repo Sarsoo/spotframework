@@ -22,7 +22,10 @@ if __name__ == '__main__':
 
     try:
 
-        network = Network(User())
+        network = Network(User(os.environ['SPOTCLIENT'],
+                               os.environ['SPOTSECRET'],
+                               os.environ['SPOTACCESS'],
+                               os.environ['SPOTREFRESH']))
 
         found = False
 
