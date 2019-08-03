@@ -1,5 +1,7 @@
 from google.cloud import firestore
 
+import datetime
+
 from spotframework.engine.playlistengine import PlaylistEngine
 from spotframework.engine.filter.shuffle import Shuffle
 from spotframework.engine.filter.sortreversereleasedate import SortReverseReleaseDate
@@ -13,8 +15,7 @@ db = firestore.Client()
 
 def run_user_playlist(username, playlist_name):
 
-    users = db.collection(u'spotify_users').where(u'username', u'==', username).stream()
-    users = [i for i in users]
+    users = [i for i in db.collection(u'spotify_users').where(u'username', u'==', username).stream()]
 
     if len(users) == 1:
 
@@ -53,7 +54,11 @@ def run_user_playlist(username, playlist_name):
             else:
                 processors.append(SortReverseReleaseDate())
 
-            tracks = engine.make_playlist(playlist_dict['parts'], processors)
+            if playlist_dict['type'] == 'recents':
+                boundary_date = datetime.datetime.now() - datetime.timedelta(days=playlist_dict['day_boundary'])
+                tracks = engine.get_recent_playlist(boundary_date, playlist_dict['parts'], processors)
+            else:
+                tracks = engine.make_playlist(playlist_dict['parts'], processors)
 
             engine.execute_playlist(tracks, playlist_dict['playlist_id'])
             engine.change_description(playlist_dict['parts'], playlist_dict['playlist_id'])
@@ -62,4 +67,4 @@ def run_user_playlist(username, playlist_name):
             raise Exception('multiple playlists found')
 
     else:
-        raise Exception('more than one user found')
+        raise Exception('not one user found')
