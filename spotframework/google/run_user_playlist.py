@@ -55,7 +55,7 @@ def run_user_playlist(username, playlist_name):
                 processors.append(SortReverseReleaseDate())
 
             if playlist_dict['type'] == 'recents':
-                boundary_date = datetime.datetime.now() - datetime.timedelta(days=playlist_dict['day_boundary'])
+                boundary_date = datetime.datetime.now() - datetime.timedelta(days=int(playlist_dict['day_boundary']))
                 tracks = engine.get_recent_playlist(boundary_date, playlist_dict['parts'], processors)
             else:
                 tracks = engine.make_playlist(playlist_dict['parts'], processors)
