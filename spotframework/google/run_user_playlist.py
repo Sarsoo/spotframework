@@ -12,6 +12,8 @@ from spotframework.net.user import User
 
 db = firestore.Client()
 
+captured_playlists = []
+
 
 def run_user_playlist(username, playlist_name):
 
@@ -34,7 +36,7 @@ def run_user_playlist(username, playlist_name):
             if playlist_dict['playlist_id'] is None:
                 raise Exception('no playlist id to populate')
 
-            if len(playlist_dict['parts']) == 0:
+            if len(playlist_dict['parts']) == 0 and len(playlist_dict['playlist_references']) == 0:
                 raise Exception('no playlists to use for creation')
 
             spotify_keys = db.document('key/spotify').get().to_dict()
@@ -54,11 +56,16 @@ def run_user_playlist(username, playlist_name):
             else:
                 processors.append(SortReverseReleaseDate())
 
+            global captured_playlists
+            captured_playlists = []
+
+            submit_parts = playlist_dict['parts'] + generate_parts(users[0].id, playlist_dict['name'])
+
             if playlist_dict['type'] == 'recents':
                 boundary_date = datetime.datetime.now() - datetime.timedelta(days=int(playlist_dict['day_boundary']))
-                tracks = engine.get_recent_playlist(boundary_date, playlist_dict['parts'], processors)
+                tracks = engine.get_recent_playlist(boundary_date, submit_parts, processors)
             else:
-                tracks = engine.make_playlist(playlist_dict['parts'], processors)
+                tracks = engine.make_playlist(submit_parts, processors)
 
             engine.execute_playlist(tracks, playlist_dict['playlist_id'])
             engine.change_description(playlist_dict['parts'], playlist_dict['playlist_id'])
@@ -68,3 +75,18 @@ def run_user_playlist(username, playlist_name):
 
     else:
         raise Exception('not one user found')
+
+
+def generate_parts(user_id, name):
+
+    playlist_doc = [i.to_dict() for i in db.document(u'spotify_users/{}'.format(user_id)).collection(u'playlists').where(u'name', '==', name).stream()][0]
+
+    return_parts = playlist_doc['parts']
+
+    captured_playlists.append(name)
+
+    for i in playlist_doc['playlist_references']:
+        if i not in captured_playlists:
+            return_parts += generate_parts(user_id, i)
+
+    return return_parts
