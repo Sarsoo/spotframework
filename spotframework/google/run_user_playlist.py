@@ -68,7 +68,7 @@ def run_user_playlist(username, playlist_name):
                 tracks = engine.make_playlist(submit_parts, processors)
 
             engine.execute_playlist(tracks, playlist_dict['playlist_id'])
-            engine.change_description(playlist_dict['parts'], playlist_dict['playlist_id'])
+            engine.change_description({i for i in submit_parts}, playlist_dict['playlist_id'])
 
         else:
             raise Exception('multiple playlists found')
