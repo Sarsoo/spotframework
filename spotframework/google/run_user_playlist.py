@@ -59,32 +59,37 @@ def run_user_playlist(username, playlist_name):
 
             submit_parts = playlist_dict['parts'] + generate_parts(users[0].id, playlist_dict['name'])
 
+            submit_parts = [i for i in {j for j in submit_parts}]
+
             if playlist_dict['type'] == 'recents':
                 boundary_date = datetime.datetime.now() - datetime.timedelta(days=int(playlist_dict['day_boundary']))
                 tracks = engine.get_recent_playlist(boundary_date,
                                                     submit_parts,
                                                     processors,
                                                     include_recommendations=playlist_dict['include_recommendations'],
-                                                    recommendation_limit=playlist_dict['recommendation_sample'])
+                                                    recommendation_limit=int(playlist_dict['recommendation_sample']))
             else:
                 tracks = engine.make_playlist(submit_parts,
                                               processors,
                                               include_recommendations=playlist_dict['include_recommendations'],
-                                              recommendation_limit=playlist_dict['recommendation_sample'])
+                                              recommendation_limit=int(playlist_dict['recommendation_sample']))
 
             engine.execute_playlist(tracks, playlist_dict['playlist_id'])
-            engine.change_description({i for i in submit_parts}, playlist_dict['playlist_id'])
+            engine.change_description(sorted(submit_parts), playlist_dict['playlist_id'])
 
         else:
-            raise Exception('multiple playlists found')
+            raise Exception('multiple/no playlists found')
 
     else:
-        raise Exception('not one user found')
+        raise Exception('multiple/no user(s) found')
 
 
 def generate_parts(user_id, name):
 
-    playlist_doc = [i.to_dict() for i in db.document(u'spotify_users/{}'.format(user_id)).collection(u'playlists').where(u'name', '==', name).stream()][0]
+    playlist_doc = [i.to_dict() for i in
+                    db.document(u'spotify_users/{}'.format(user_id))
+                    .collection(u'playlists')
+                    .where(u'name', '==', name).stream()][0]
 
     return_parts = playlist_doc['parts']
 
