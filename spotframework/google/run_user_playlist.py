@@ -25,8 +25,6 @@ def run_user_playlist(username, playlist_name):
 
         playlist_collection = db.collection(u'spotify_users', u'{}'.format(users[0].id), 'playlists')
 
-        print(user_dict['access_token'], user_dict['refresh_token'])
-
         playlists = [i for i in playlist_collection.where(u'name', u'==', playlist_name).stream()]
 
         if len(playlists) == 1:
@@ -63,9 +61,16 @@ def run_user_playlist(username, playlist_name):
 
             if playlist_dict['type'] == 'recents':
                 boundary_date = datetime.datetime.now() - datetime.timedelta(days=int(playlist_dict['day_boundary']))
-                tracks = engine.get_recent_playlist(boundary_date, submit_parts, processors)
+                tracks = engine.get_recent_playlist(boundary_date,
+                                                    submit_parts,
+                                                    processors,
+                                                    include_recommendations=playlist_dict['include_recommendations'],
+                                                    recommendation_limit=playlist_dict['recommendation_sample'])
             else:
-                tracks = engine.make_playlist(submit_parts, processors)
+                tracks = engine.make_playlist(submit_parts,
+                                              processors,
+                                              include_recommendations=playlist_dict['include_recommendations'],
+                                              recommendation_limit=playlist_dict['recommendation_sample'])
 
             engine.execute_playlist(tracks, playlist_dict['playlist_id'])
             engine.change_description({i for i in submit_parts}, playlist_dict['playlist_id'])

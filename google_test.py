@@ -1,8 +1,3 @@
-import main
+from spotframework.google.run_user_playlist import run_user_playlist as run_user_playlist
 
-main.run_user_playlist({
-    'data': 'ELECTRONIC',
-    'attributes': {
-        'username': 'andy'
-    }
-}, None)
+run_user_playlist('andy', 'DNB')

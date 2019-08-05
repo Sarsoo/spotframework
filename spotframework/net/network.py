@@ -1,4 +1,5 @@
 import requests
+import random
 from . import const
 from spotframework.model.playlist import Playlist
 import spotframework.log.log as log
@@ -277,3 +278,16 @@ class Network:
             if len(uris) > 100:
 
                 self.add_playlist_tracks(playlistid, uris[100:])
+
+    def get_recommendations(self, tracks=None, artists=None, response_limit=10):
+
+        params = {'limit': response_limit}
+
+        if tracks:
+            random.shuffle(tracks)
+            params['seed_tracks'] = tracks[:100]
+        if artists:
+            random.shuffle(artists)
+            params['seed_artists'] = artists[:100]
+
+        return self._make_get_request('getRecommendations', 'recommendations', params=params)

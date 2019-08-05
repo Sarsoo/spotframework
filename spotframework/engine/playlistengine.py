@@ -23,7 +23,7 @@ class PlaylistEngine:
         log.log(f"pulling tracks for {playlist.name}")
         playlist.tracks = self.net.get_playlist_tracks(playlist.playlistid)
 
-    def make_playlist(self, playlist_parts, processors=[]):
+    def make_playlist(self, playlist_parts, processors=[], include_recommendations=False, recommendation_limit=10):
 
         tracks = []
 
@@ -51,10 +51,19 @@ class PlaylistEngine:
         for processor in [i for i in processors if len(i.playlist_names) <= 0]:
             tracks = processor.process(tracks)
 
+        tracks = [i['track'] for i in tracks]
+
+        if include_recommendations:
+            try:
+                tracks += self.net.get_recommendations(tracks=[i['id'] for i in tracks],
+                                                       response_limit=recommendation_limit)['tracks']
+            except Exception as e:
+                print(e)
+
         # print(tracks)
         return tracks
 
-    def get_recent_playlist(self, boundary_date, recent_playlist_parts, processors=[]):
+    def get_recent_playlist(self, boundary_date, recent_playlist_parts, processors=[], include_recommendations=False, recommendation_limit=10):
         this_month = monthstrings.get_this_month()
         last_month = monthstrings.get_last_month()
 
@@ -62,10 +71,13 @@ class PlaylistEngine:
 
         processors.append(datefilter)
 
-        return self.make_playlist(recent_playlist_parts + [this_month, last_month], processors)
+        return self.make_playlist(recent_playlist_parts + [this_month, last_month],
+                                  processors,
+                                  include_recommendations=include_recommendations,
+                                  recommendation_limit=recommendation_limit)
 
     def execute_playlist(self, tracks, playlist_id):
-        self.net.replace_playlist_tracks(playlist_id, [i['track']['uri'] for i in tracks])
+        self.net.replace_playlist_tracks(playlist_id, [i['uri'] for i in tracks])
 
     def change_description(self, playlistparts, playlist_id):
         self.net.change_playlist_details(playlist_id, description=' / '.join(playlistparts))
