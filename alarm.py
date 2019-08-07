@@ -1,17 +1,28 @@
 from spotframework.net.user import User
 from spotframework.net.network import Network
-import spotframework.log.log as log
 import spotframework.net.const as const
 import spotframework.io.json as json
 
 import os
 import datetime
+import logging
+
+
+logger = logging.getLogger('spotframework')
+
+log_format = '%(asctime)s %(levelname)s %(name)s:%(funcName)s - %(message)s'
+
+file_handler = logging.FileHandler(".spot/alarm.log")
+formatter = logging.Formatter(log_format)
+file_handler.setFormatter(formatter)
+
+logger.addHandler(file_handler)
 
 
 def check_phone():
 
     response = os.system("ping -c 1 -w5 " + os.environ['PHONEIP'] + " > /dev/null 2>&1")
-    log.log('checking for phone')
+    logger.info('checking for phone')
     if response == 0:
         return True
     else:
@@ -54,7 +65,5 @@ if __name__ == '__main__':
                 network.set_volume(data['alarm']['volume'])
                 network.next()
 
-        log.dump_log()
-
-    except:
-        log.dump_log()
+    except Exception as e:
+        logger.exception('exception occured')

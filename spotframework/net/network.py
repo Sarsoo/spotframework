@@ -1,10 +1,12 @@
 import requests
 import random
+import logging
 from . import const
 from spotframework.model.playlist import Playlist
-import spotframework.log.log as log
 
 limit = 50
+
+logger = logging.getLogger(__name__)
 
 
 class Network:
@@ -19,10 +21,10 @@ class Network:
         req = requests.get(const.api_url + url, params=params, headers=headers)
 
         if 200 <= req.status_code < 300:
-            log.log(method, 'get', str(req.status_code))
+            logger.debug(f'{method} get {req.status_code}')
             return req.json()
         else:
-            log.log(method, 'get', str(req.status_code), req.text)
+            logger.error(f'{method} get {req.status_code} {req.text}')
 
         return None
 
@@ -33,10 +35,10 @@ class Network:
         req = requests.post(const.api_url + url, params=params, json=json, headers=headers)
 
         if 200 <= req.status_code < 300:
-            log.log(method, 'post', str(req.status_code))
+            logger.debug(f'{method} post {req.status_code}')
             return req
         else:
-            log.log(method, 'post', str(req.status_code), req.text)
+            logger.error(f'{method} post {req.status_code} {req.text}')
 
         return None
 
@@ -47,30 +49,27 @@ class Network:
         req = requests.put(const.api_url + url, params=params, json=json, headers=headers)
 
         if 200 <= req.status_code < 300:
-            log.log(method, 'put', str(req.status_code))
+            logger.debug(f'{method} put {req.status_code}')
             return req
         else:
-            log.log(method, 'put', str(req.status_code), req.text)
+            logger.error(f'{method} put {req.status_code} {req.text}')
 
         return None
 
-    def get_playlist(self, playlistid, tracksonly=False):
+    def get_playlist(self, playlistid):
 
-        log.log("getPlaylist", playlistid)
+        logger.info(f"{playlistid}")
 
         tracks = self.get_playlist_tracks(playlistid)
 
         playlist = Playlist(playlistid)
         playlist.tracks += tracks
 
-        if not tracksonly:
-            pass
-
         return playlist
 
     def get_playlists(self, offset=0):
 
-        log.log("getPlaylists", offset)
+        logger.info(f"{offset}")
 
         playlists = []
 
@@ -100,13 +99,13 @@ class Network:
 
     def get_user_playlists(self):
 
-        log.log("getUserPlaylists")
+        logger.info('retrieved')
 
         return list(filter(lambda x: x.userid == self.user.username, self.get_playlists()))
 
     def get_playlist_tracks(self, playlistid, offset=0):
 
-        log.log("getPlaylistTracks", playlistid, offset)
+        logger.info(f"{playlistid}{' ' + str(offset) if offset is not 0 else ''}")
 
         tracks = []
 
@@ -114,7 +113,10 @@ class Network:
 
         resp = self._make_get_request('getPlaylistTracks', f'playlists/{playlistid}/tracks', params=params)
 
-        tracks += resp['items']
+        if resp and resp.get('items'):
+            tracks += resp['items']
+        else:
+            logger.warning(f'{playlistid} no response or items')
 
         if resp['next']:
             tracks += self.get_playlist_tracks(playlistid, offset + limit)
@@ -123,25 +125,25 @@ class Network:
 
     def get_available_devices(self):
 
-        log.log("getAvailableDevices")
+        logger.info("retrieved")
 
         return self._make_get_request('getAvailableDevices', 'me/player/devices')
 
     def get_player(self):
 
-        log.log("getPlayer")
+        logger.info("retrieved")
 
         return self._make_get_request('getPlayer', 'me/player')
 
     def get_device_id(self, devicename):
 
-        log.log("getDeviceID", devicename)
+        logger.info(f"{devicename}")
 
         return next((i for i in self.get_available_devices()['devices'] if i['name'] == devicename), None)['id']
 
     def play(self, uri, deviceid=None):
 
-        log.log("play", uri, deviceid)
+        logger.info(f"{uri}{' ' + deviceid if deviceid is not None else ''}")
 
         if deviceid is not None:
             params = {'device_id': deviceid}
@@ -154,7 +156,7 @@ class Network:
 
     def pause(self, deviceid=None):
 
-        log.log("pause", deviceid)
+        logger.info(f"{deviceid if deviceid is not None else ''}")
 
         if deviceid is not None:
             params = {'device_id': deviceid}
@@ -165,7 +167,7 @@ class Network:
 
     def next(self, deviceid=None):
 
-        log.log("next", deviceid)
+        logger.info(f"{deviceid if deviceid is not None else ''}")
 
         if deviceid is not None:
             params = {'device_id': deviceid}
@@ -176,7 +178,7 @@ class Network:
 
     def set_shuffle(self, state, deviceid=None):
 
-        log.log("setShuffle", state, deviceid)
+        logger.info(f"{state}{' ' + deviceid if deviceid is not None else ''}")
 
         params = {'state': str(state).lower()}
 
@@ -187,9 +189,9 @@ class Network:
 
     def set_volume(self, volume, deviceid=None):
 
-        log.log("setVolume", volume, deviceid)
+        logger.info(f"{volume}{' ' + deviceid if deviceid is not None else ''}")
 
-        if 0 <= int(volume) <= 100:
+        if volume.isdigit() and 0 <= int(volume) <= 100:
 
             params = {'volume_percent': volume}
 
@@ -199,11 +201,11 @@ class Network:
             req = self._make_put_request('setVolume', 'me/player/volume', params=params)
 
         else:
-            log.log("setVolume", volume, "not allowed")
+            logger.error(f"{volume} not accepted value")
 
     def make_playlist(self, name, description=None, public=True, collaborative=False):
 
-        log.log("makePlaylist", name, f'description:{description}', f'public:{public}', f'collaborative:{collaborative}')
+        logger.info(f"{name}, desc: {description}, public: {public}, collab: {collaborative}")
 
         headers = {"Content-Type": "application/json"}
 
@@ -225,7 +227,7 @@ class Network:
 
     def replace_playlist_tracks(self, playlistid, uris):
 
-        log.log("replacePlaylistTracks", playlistid)
+        logger.info(f"{playlistid}")
 
         headers = {"Content-Type": "application/json"}
 
@@ -241,7 +243,7 @@ class Network:
 
     def change_playlist_details(self, playlistid, name=None, public=None, collaborative=None, description=None):
 
-        log.log("changePlaylistDetails", playlistid)
+        logger.info(f"{playlistid}")
 
         headers = {"Content-Type": "application/json"}
 
@@ -264,7 +266,7 @@ class Network:
 
     def add_playlist_tracks(self, playlistid, uris):
 
-        log.log("addPlaylistTracks", playlistid)
+        logger.info(f"{playlistid}")
 
         headers = {"Content-Type": "application/json"}
 
@@ -280,6 +282,8 @@ class Network:
                 self.add_playlist_tracks(playlistid, uris[100:])
 
     def get_recommendations(self, tracks=None, artists=None, response_limit=10):
+
+        logger.info(f'tracks: {tracks}, artists {artists}, sample: {response_limit}')
 
         params = {'limit': response_limit}
 

@@ -1,13 +1,23 @@
 from  spotframework.net.user import User
 from  spotframework.net.network import Network
 import spotframework.io.csv as csvwrite
-import spotframework.log.log as log
 
 import sys
 import datetime
 import os
+import logging
 
 if __name__ == '__main__':
+
+    logger = logging.getLogger('spotframework')
+
+    log_format = '%(asctime)s %(levelname)s %(name)s:%(funcName)s - %(message)s'
+
+    file_handler = logging.FileHandler(".spot/backup.log")
+    formatter = logging.Formatter(log_format)
+    file_handler.setFormatter(formatter)
+
+    logger.addHandler(file_handler)
 
     try:
 
@@ -32,7 +42,5 @@ if __name__ == '__main__':
         for play in playlists:
             csvwrite.export_playlist(play, totalpath)
 
-        log.dump_log()
-
-    except:
-        log.dump_log()
+    except Exception as e:
+        logger.exception(f'exception occured')

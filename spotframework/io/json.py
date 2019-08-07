@@ -1,12 +1,13 @@
 import json
 import os
+import logging
 
-import spotframework.log.log as log
+logger = logging.getLogger(__name__)
 
 
 def load_json(path):
 
-    log.log("load json", path)
+    logger.info(f"{path}")
 
     if os.path.exists(path):
         with open(path, 'r') as fileobj:
@@ -15,6 +16,6 @@ def load_json(path):
             return data
 
     else:
-        log.log("load json", "file doesn't exist")
+        logger.error("file doesn't exist")
 
     return None

@@ -1,10 +1,11 @@
-import spotframework.log.log as log
-
 import requests
 import os
+import logging
 
 import spotframework.util.monthstrings as monthstrings
 from spotframework.engine.filter.addedsince import AddedSince
+
+logger = logging.getLogger(__name__)
 
 
 class PlaylistEngine:
@@ -20,7 +21,7 @@ class PlaylistEngine:
         self.playlists += self.net.get_user_playlists()
 
     def get_playlist_tracks(self, playlist):
-        log.log(f"pulling tracks for {playlist.name}")
+        logger.info(f"pulling tracks for {playlist.name}")
         playlist.tracks = self.net.get_playlist_tracks(playlist.playlistid)
 
     def make_playlist(self, playlist_parts, processors=[], include_recommendations=False, recommendation_limit=10):
@@ -44,7 +45,7 @@ class PlaylistEngine:
                 tracks += [i for i in playlist_tracks if i['is_local'] is False]
 
             else:
-                log.log(f"requested playlist {part} not found")
+                logger.warning(f"requested playlist {part} not found")
                 if 'SLACKHOOK' in os.environ:
                     requests.post(os.environ['SLACKHOOK'], json={"text": f"spot playlists: {part} not found"})
 
@@ -58,7 +59,7 @@ class PlaylistEngine:
                 tracks += self.net.get_recommendations(tracks=[i['id'] for i in tracks],
                                                        response_limit=recommendation_limit)['tracks']
             except Exception as e:
-                print(e)
+                logger.exception('exception occured')
 
         # print(tracks)
         return tracks

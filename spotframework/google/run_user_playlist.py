@@ -1,6 +1,7 @@
 from google.cloud import firestore
 
 import datetime
+import logging
 
 from spotframework.engine.playlistengine import PlaylistEngine
 from spotframework.engine.filter.shuffle import Shuffle
@@ -17,7 +18,11 @@ captured_playlists = []
 
 def run_user_playlist(username, playlist_name):
 
+    logger = logging.getLogger(__name__)
+
     users = [i for i in db.collection(u'spotify_users').where(u'username', u'==', username).stream()]
+
+    logger.info(f'{username} / {playlist_name}')
 
     if len(users) == 1:
 
@@ -32,10 +37,12 @@ def run_user_playlist(username, playlist_name):
             playlist_dict = playlists[0].to_dict()
 
             if playlist_dict['playlist_id'] is None:
-                raise Exception('no playlist id to populate')
+                logger.critical(f'no playlist id to populate ({username}/{playlist_name})')
+                return
 
             if len(playlist_dict['parts']) == 0 and len(playlist_dict['playlist_references']) == 0:
-                raise Exception('no playlists to use for creation')
+                logger.critical(f'no playlists to use for creation ({username}/{playlist_name})')
+                return
 
             spotify_keys = db.document('key/spotify').get().to_dict()
 
@@ -78,10 +85,12 @@ def run_user_playlist(username, playlist_name):
             engine.change_description(sorted(submit_parts), playlist_dict['playlist_id'])
 
         else:
-            raise Exception('multiple/no playlists found')
+            logger.critical(f'multiple/no playlists found ({username}/{playlist_name})')
+            return
 
     else:
-        raise Exception('multiple/no user(s) found')
+        logger.critical(f'multiple/no user(s) found ({username}/{playlist_name})')
+        return
 
 
 def generate_parts(user_id, name):

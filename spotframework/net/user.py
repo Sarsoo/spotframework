@@ -1,5 +1,8 @@
 import requests
 from base64 import b64encode
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class User:
@@ -24,12 +27,20 @@ class User:
     
         req = requests.post('https://accounts.spotify.com/api/token', data=data, headers=headers)
    
-        if req.status_code is 200:
+        if 200 <= req.status_code < 300:
+            logger.debug('token refreshed')
             self.accesstoken = req.json()['access_token']
+        else:
+            logger.error(f'http error {req.status_code}')
 
     def get_info(self):
         
         headers = {'Authorization': 'Bearer %s' % self.accesstoken}
 
         req = requests.get('https://api.spotify.com/v1/me', headers=headers)
-        return req.json()
+
+        if 200 <= req.status_code < 300:
+            logger.debug(f'retrieved {req.status_code}')
+            return req.json()
+        else:
+            logger.error(f'http error {req.status_code}')

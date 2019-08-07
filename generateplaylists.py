@@ -1,7 +1,6 @@
 import spotframework.net.const as const
 from spotframework.net.network import Network
 from spotframework.net.user import User
-import spotframework.log.log as log
 import spotframework.io.json as json
 import spotframework.util.monthstrings as monthstrings
 from spotframework.engine.playlistengine import PlaylistEngine
@@ -13,13 +12,25 @@ from spotframework.engine.filter.deduplicatebyname import DeduplicateByName
 import os
 import datetime
 import sys
+import logging
 
 import requests
 
 
+logger = logging.getLogger('spotframework')
+
+log_format = '%(asctime)s %(levelname)s %(name)s - %(funcName)s - %(message)s'
+
+file_handler = logging.FileHandler(".spot/generate_playlists.log")
+formatter = logging.Formatter(log_format)
+file_handler.setFormatter(formatter)
+
+logger.addHandler(file_handler)
+
+
 def update_super_playlist(engine, data_dict):
 
-    log.log("makePlaylist", data_dict['name'])
+    logger.info(f"makePlaylist {data_dict['name']}")
 
     processors = [DeduplicateByID()]
 
@@ -98,10 +109,10 @@ def go():
                 specials_to_execute = ['recents']
 
             if len(not_found) > 0:
-                log.log('arg not found', not_found)
+                logger.error(f'arg not found {not_found}')
 
             if len(to_execute) <= 0 and len(specials_to_execute) <= 0:
-                log.log('none to execute, terminating')
+                logger.critical('none to execute, terminating')
                 return
 
             net = Network(User(os.environ['SPOTCLIENT'],
@@ -119,16 +130,14 @@ def go():
                 update_recents_playlist(engine, data)
 
         else:
-            log.log("config json not found")
+            logger.critical("config json not found")
             if 'SLACKHOOK' in os.environ:
                 requests.post(os.environ['SLACKHOOK'], json={"text": "spot playlists: config json not found"})
 
-        log.dump_log()
     except Exception as e:
-        log.log("exception occured", e)
+        logger.exception("exception occured")
         if 'SLACKHOOK' in os.environ:
             requests.post(os.environ['SLACKHOOK'], json={"text": f"spot playlists: exception occured {e}"})
-        log.dump_log()
 
 
 if __name__ == '__main__':
