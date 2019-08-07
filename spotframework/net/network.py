@@ -283,7 +283,7 @@ class Network:
 
     def get_recommendations(self, tracks=None, artists=None, response_limit=10):
 
-        logger.info(f'tracks: {tracks}, artists {artists}, sample: {response_limit}')
+        logger.info(f'sample size: {response_limit}')
 
         params = {'limit': response_limit}
 
