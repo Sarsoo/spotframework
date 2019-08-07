@@ -118,7 +118,7 @@ class Network:
         else:
             logger.warning(f'{playlistid} no response or items')
 
-        if resp['next']:
+        if resp.get('next', None):
             tracks += self.get_playlist_tracks(playlistid, offset + limit)
 
         return tracks
