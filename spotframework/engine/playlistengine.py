@@ -15,10 +15,10 @@ class PlaylistEngine:
         self.net = net
 
     def load_user_playlists(self):
-        self.playlists = self.net.get_user_playlists()
+        self.playlists = self.net.get_playlists()
 
     def append_user_playlists(self):
-        self.playlists += self.net.get_user_playlists()
+        self.playlists += self.net.get_playlists()
 
     def get_playlist_tracks(self, playlist):
         logger.info(f"pulling tracks for {playlist.name}")
