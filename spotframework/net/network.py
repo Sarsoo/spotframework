@@ -67,6 +67,15 @@ class Network:
 
         return playlist
 
+    def create_playlist(self, username, name='New Playlist', public=True, collaborative=False, description=None):
+
+        json = {"name": name, "public": public, "collaborative": collaborative}
+
+        if description:
+            json['description'] = description
+
+        req = self._make_post_request('createPlaylist', f'users/{username}/playlists', json=json)
+
     def get_playlists(self, offset=0):
 
         logger.info(f"{offset}")
