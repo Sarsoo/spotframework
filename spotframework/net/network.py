@@ -24,7 +24,8 @@ class Network:
             logger.debug(f'{method} get {req.status_code}')
             return req.json()
         else:
-            logger.error(f'{method} get {req.status_code} {req.text}')
+            error_text = req.json()['error']['message']
+            logger.error(f'{method} get {req.status_code} {error_text}')
 
         return None
 
@@ -38,7 +39,8 @@ class Network:
             logger.debug(f'{method} post {req.status_code}')
             return req
         else:
-            logger.error(f'{method} post {req.status_code} {req.text}')
+            error_text = req.json()['error']['message']
+            logger.error(f'{method} post {req.status_code} {error_text}')
 
         return None
 
@@ -52,7 +54,8 @@ class Network:
             logger.debug(f'{method} put {req.status_code}')
             return req
         else:
-            logger.error(f'{method} put {req.status_code} {req.text}')
+            error_text = req.json()['error']['message']
+            logger.error(f'{method} put {req.status_code} {error_text}')
 
         return None
 
