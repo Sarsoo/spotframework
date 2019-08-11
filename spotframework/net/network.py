@@ -39,7 +39,7 @@ class Network:
             logger.debug(f'{method} post {req.status_code}')
             return req
         else:
-            error_text = req.json()['error']['message']
+            error_text = str(req.text)
             logger.error(f'{method} post {req.status_code} {error_text}')
 
         return None
@@ -54,7 +54,7 @@ class Network:
             logger.debug(f'{method} put {req.status_code}')
             return req
         else:
-            error_text = req.json()['error']['message']
+            error_text = str(req.text)
             logger.error(f'{method} put {req.status_code} {error_text}')
 
         return None
@@ -153,7 +153,7 @@ class Network:
 
         return next((i for i in self.get_available_devices()['devices'] if i['name'] == devicename), None)['id']
 
-    def play(self, uri, deviceid=None):
+    def play(self, uri=None, uris=None, deviceid=None):
 
         logger.info(f"{uri}{' ' + deviceid if deviceid is not None else ''}")
 
@@ -162,7 +162,17 @@ class Network:
         else:
             params = None
 
-        payload = {'context_uri': uri}
+        if uri and uris:
+            raise Exception('wont take both context uri and uris')
+
+        if uri:
+            payload = {'context_uri': uri}
+
+        if uris:
+            payload = {'uris': uris[:200]}
+
+        if not uri and not uris:
+            raise Exception('need either context uri or uris')
 
         req = self._make_put_request('play', 'me/player/play', params=params, json=payload)
 
