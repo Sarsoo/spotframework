@@ -79,6 +79,9 @@ class Network:
 
         req = self._make_post_request('createPlaylist', f'users/{username}/playlists', json=json)
 
+        if 200 <= req.status_code < 300:
+            return req.json()
+
     def get_playlists(self, offset=0):
 
         logger.info(f"{offset}")
@@ -224,28 +227,6 @@ class Network:
 
         else:
             logger.error(f"{volume} not accepted value")
-
-    def make_playlist(self, name, description=None, public=True, collaborative=False):
-
-        logger.info(f"{name}, desc: {description}, public: {public}, collab: {collaborative}")
-
-        headers = {"Content-Type": "application/json"}
-
-        json = {"name": name, "public": public, "collaborative": collaborative}
-
-        if description is not None:
-            json["description"] = description
-
-        req = self._make_post_request('makePlaylist', f'users/{self.user.username}/playlists', json=json, headers=headers)
-
-        if req is not None:
-            resp = req.json()
-
-            if resp is not None:
-                playlist = Playlist(resp["id"], uri=resp['uri'], name=resp['name'], userid=resp['owner']['id'])
-                return playlist
-
-        return None
 
     def replace_playlist_tracks(self, playlistid, uris):
 
