@@ -65,10 +65,15 @@ class Network:
 
         tracks = self.get_playlist_tracks(playlistid)
 
-        playlist = Playlist(playlistid)
-        playlist.tracks += tracks
+        if tracks is not None:
 
-        return playlist
+            playlist = Playlist(playlistid)
+            playlist.tracks += tracks
+
+            return playlist
+        else:
+            logger.error(f"{playlistid} - no tracks returned")
+            return None
 
     def create_playlist(self, username, name='New Playlist', public=True, collaborative=False, description=None):
 
@@ -81,6 +86,9 @@ class Network:
 
         if 200 <= req.status_code < 300:
             return req.json()
+        else:
+            logger.error('error creating playlist')
+            return None
 
     def get_playlists(self, offset=0):
 
@@ -105,18 +113,27 @@ class Network:
             # playlists = playlists + resp['items']
 
             if resp['next']:
-                playlists += self.get_playlists(offset + limit)
+                more_playlists = self.get_playlists(offset + limit)
+                if more_playlists:
+                    playlists += more_playlists
 
             return playlists
 
         else:
+            logger.error(f'error getting playlists offset={offset}')
             return None
 
     def get_user_playlists(self):
 
         logger.info('retrieved')
 
-        return list(filter(lambda x: x.userid == self.user.username, self.get_playlists()))
+        playlists = self.get_playlists()
+
+        if playlists:
+            return list(filter(lambda x: x.userid == self.user.username, playlists))
+        else:
+            logger.error('no playlists returned to filter')
+            return None
 
     def get_playlist_tracks(self, playlistid, offset=0):
 
@@ -128,33 +145,54 @@ class Network:
 
         resp = self._make_get_request('getPlaylistTracks', f'playlists/{playlistid}/tracks', params=params)
 
-        if resp and resp.get('items'):
-            tracks += resp['items']
+        if resp:
+            if resp.get('items', None):
+                tracks += resp['items']
+            else:
+                logger.warning(f'{playlistid} no items returned')
         else:
-            logger.warning(f'{playlistid} no response or items')
+            logger.warning(f'{playlistid} error on response')
 
         if resp.get('next', None):
-            tracks += self.get_playlist_tracks(playlistid, offset + limit)
+
+            more_tracks = self.get_playlist_tracks(playlistid, offset + limit)
+            if more_tracks:
+                tracks += more_tracks
 
         return tracks
 
     def get_available_devices(self):
 
-        logger.info("retrieved")
+        logger.info("retrieving")
 
-        return self._make_get_request('getAvailableDevices', 'me/player/devices')
+        resp = self._make_get_request('getAvailableDevices', 'me/player/devices')
+        if resp:
+            return resp
+        else:
+            logger.error('no devices returned')
+            return None
 
     def get_player(self):
 
         logger.info("retrieved")
 
-        return self._make_get_request('getPlayer', 'me/player')
+        resp = self._make_get_request('getPlayer', 'me/player')
+        if resp:
+            return resp
+        else:
+            logger.error('no player returned')
+            return None
 
     def get_device_id(self, devicename):
 
         logger.info(f"{devicename}")
 
-        return next((i for i in self.get_available_devices()['devices'] if i['name'] == devicename), None)['id']
+        resp = self.get_available_devices()
+        if resp:
+            return next((i for i in resp['devices'] if i['name'] == devicename), None)['id']
+        else:
+            logger.error('no devices returned')
+            return None
 
     def play(self, uri=None, uris=None, deviceid=None):
 
@@ -178,6 +216,8 @@ class Network:
             raise Exception('need either context uri or uris')
 
         req = self._make_put_request('play', 'me/player/play', params=params, json=payload)
+        if req is None:
+            logger.error('error playing')
 
     def pause(self, deviceid=None):
 
@@ -189,6 +229,8 @@ class Network:
             params = None
 
         req = self._make_put_request('pause', 'me/player/pause', params=params)
+        if req is None:
+            logger.error('error pausing')
 
     def next(self, deviceid=None):
 
@@ -200,6 +242,8 @@ class Network:
             params = None
 
         req = self._make_post_request('next', 'me/player/next', params=params)
+        if req is None:
+            logger.error('error skipping')
 
     def set_shuffle(self, state, deviceid=None):
 
@@ -211,6 +255,8 @@ class Network:
             params['device_id'] = deviceid
 
         req = self._make_put_request('setShuffle', 'me/player/shuffle', params=params)
+        if req is None:
+            logger.error(f'error setting shuffle {state}')
 
     def set_volume(self, volume, deviceid=None):
 
@@ -224,9 +270,15 @@ class Network:
                 params['device_id'] = deviceid
 
             req = self._make_put_request('setVolume', 'me/player/volume', params=params)
+            if req:
+                return req
+            else:
+                logger.error(f'error setting volume {volume}')
+                return None
 
         else:
             logger.error(f"{volume} not accepted value")
+            return None
 
     def replace_playlist_tracks(self, playlistid, uris):
 
@@ -239,10 +291,13 @@ class Network:
         req = self._make_put_request('replacePlaylistTracks', f'playlists/{playlistid}/tracks', json=json, headers=headers)
 
         if req is not None:
-            resp = req.json()
 
             if len(uris) > 100:
-                self.add_playlist_tracks(playlistid, uris[100:])
+                return self.add_playlist_tracks(playlistid, uris[100:])
+
+            return req
+        else:
+            logger.error(f'error replacing playlist tracks, total: {len(uris)}')
 
     def change_playlist_details(self, playlistid, name=None, public=None, collaborative=None, description=None):
 
@@ -264,8 +319,16 @@ class Network:
         if description is not None:
             json['description'] = description
 
-        req = self._make_put_request('changePlaylistDetails', f'playlists/{playlistid}', json=json, headers=headers)
-        return req
+        if len(json) == 0:
+            logger.warning('update dictionairy length 0')
+            return None
+        else:
+            req = self._make_put_request('changePlaylistDetails', f'playlists/{playlistid}', json=json, headers=headers)
+            if req:
+                return req
+            else:
+                logger.error('error updating details')
+                return None
 
     def add_playlist_tracks(self, playlistid, uris):
 
@@ -280,9 +343,17 @@ class Network:
         if req is not None:
             resp = req.json()
 
+            snapshots = [resp]
+
             if len(uris) > 100:
 
-                self.add_playlist_tracks(playlistid, uris[100:])
+                snapshots += self.add_playlist_tracks(playlistid, uris[100:])
+
+            return snapshots
+
+        else:
+            logger.error(f'error retrieving tracks {playlistid}, total: {len(uris)}')
+            return []
 
     def get_recommendations(self, tracks=None, artists=None, response_limit=10):
 
@@ -297,4 +368,13 @@ class Network:
             random.shuffle(artists)
             params['seed_artists'] = artists[:100]
 
-        return self._make_get_request('getRecommendations', 'recommendations', params=params)
+        if len(params) == 1:
+            logger.warning('update dictionairy length 0')
+            return None
+        else:
+            resp = self._make_get_request('getRecommendations', 'recommendations', params=params)
+            if resp:
+                return resp
+            else:
+                logger.error('error getting recommendations')
+                return None

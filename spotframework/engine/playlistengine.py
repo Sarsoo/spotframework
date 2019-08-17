@@ -15,14 +15,31 @@ class PlaylistEngine:
         self.net = net
 
     def load_user_playlists(self):
-        self.playlists = self.net.get_playlists()
+        logger.info('loading')
+
+        playlists = self.net.get_playlists()
+        if playlists and len(playlists) > 0:
+            self.playlists = playlists
+        else:
+            logger.error('error getting playlists')
 
     def append_user_playlists(self):
-        self.playlists += self.net.get_playlists()
+        logger.info('loading')
+
+        playlists = self.net.get_playlists()
+        if playlists and len(playlists) > 0:
+            self.playlists += playlists
+        else:
+            logger.error('error getting playlists')
 
     def get_playlist_tracks(self, playlist):
         logger.info(f"pulling tracks for {playlist.name}")
-        playlist.tracks = self.net.get_playlist_tracks(playlist.playlistid)
+
+        tracks = self.net.get_playlist_tracks(playlist.playlistid)
+        if tracks and len(tracks) > 0:
+            playlist.tracks = tracks
+        else:
+            logger.error('error getting tracks')
 
     def make_playlist(self, playlist_parts, processors=[], include_recommendations=False, recommendation_limit=10):
 
@@ -55,30 +72,62 @@ class PlaylistEngine:
         tracks = [i['track'] for i in tracks]
 
         if include_recommendations:
-            try:
-                tracks += self.net.get_recommendations(tracks=[i['id'] for i in tracks],
-                                                       response_limit=recommendation_limit)['tracks']
-            except Exception as e:
-                logger.exception('exception occured')
+            recommendations = self.net.get_recommendations(tracks=[i['id'] for i in tracks],
+                                                           response_limit=recommendation_limit)
+            if recommendations and len(recommendations) > 0:
+                tracks += recommendations['tracks']
+            else:
+                logger.error('error getting recommendations')
 
-        # print(tracks)
         return tracks
 
-    def get_recent_playlist(self, boundary_date, recent_playlist_parts, processors=[], include_recommendations=False, recommendation_limit=10):
+    def get_recent_playlist(self,
+                            boundary_date,
+                            recent_playlist_parts,
+                            processors=[],
+                            include_recommendations=False,
+                            recommendation_limit=10,
+                            add_this_month=False,
+                            add_last_month=False):
+
         this_month = monthstrings.get_this_month()
         last_month = monthstrings.get_last_month()
 
-        datefilter = AddedSince(boundary_date, recent_playlist_parts + [last_month])
+        month_playlists = []
+
+        if add_this_month:
+            month_playlists.append(this_month)
+
+        if add_last_month:
+            month_playlists.append(last_month)
+
+        datefilter = AddedSince(boundary_date, recent_playlist_parts + month_playlists)
 
         processors.append(datefilter)
 
-        return self.make_playlist(recent_playlist_parts + [this_month, last_month],
+        return self.make_playlist(recent_playlist_parts + month_playlists,
                                   processors,
                                   include_recommendations=include_recommendations,
                                   recommendation_limit=recommendation_limit)
 
     def execute_playlist(self, tracks, playlist_id):
-        self.net.replace_playlist_tracks(playlist_id, [i['uri'] for i in tracks])
 
-    def change_description(self, playlistparts, playlist_id):
-        self.net.change_playlist_details(playlist_id, description=' / '.join(playlistparts))
+        resp = self.net.replace_playlist_tracks(playlist_id, [i['uri'] for i in tracks])
+        if resp:
+            return resp
+        else:
+            logger.error('error executing')
+            return None
+
+    def change_description(self, playlistparts, playlist_id, suffix=None):
+
+        if suffix:
+            string = ' / '.join(playlistparts) + f' - {str(suffix)}'
+        else:
+            string = ' / '.join(playlistparts)
+
+        resp = self.net.change_playlist_details(playlist_id, description=string)
+        if resp:
+            return resp
+        else:
+            logger.error('error changing description')
