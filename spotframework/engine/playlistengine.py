@@ -119,12 +119,15 @@ class PlaylistEngine:
             logger.error('error executing')
             return None
 
-    def change_description(self, playlistparts, playlist_id, suffix=None):
+    def change_description(self, playlistparts, playlist_id, overwrite=None, suffix=None):
 
-        if suffix:
-            string = ' / '.join(playlistparts) + f' - {str(suffix)}'
+        if overwrite:
+            string = overwrite
         else:
             string = ' / '.join(playlistparts)
+
+        if suffix:
+            string += f' - {str(suffix)}'
 
         resp = self.net.change_playlist_details(playlist_id, description=string)
         if resp:
