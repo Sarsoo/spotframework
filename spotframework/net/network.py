@@ -1,6 +1,7 @@
 import requests
 import random
 import logging
+import time
 from . import const
 from spotframework.model.playlist import Playlist
 
@@ -24,8 +25,20 @@ class Network:
             logger.debug(f'{method} get {req.status_code}')
             return req.json()
         else:
-            error_text = req.json()['error']['message']
-            logger.error(f'{method} get {req.status_code} {error_text}')
+
+            if req.status_code == 429:
+                retry_after = req.headers.get('Retry-After', None)
+
+                if retry_after:
+                    logger.warning(f'{method} rate limit reached: retrying in {retry_after} seconds')
+                    time.sleep(int(retry_after))
+                    return self._make_get_request(method, url, params, headers)
+                else:
+                    logger.error(f'{method} rate limit reached: cannot find Retry-After header')
+
+            else:
+                error_text = req.json()['error']['message']
+                logger.error(f'{method} get {req.status_code} {error_text}')
 
         return None
 
@@ -39,8 +52,20 @@ class Network:
             logger.debug(f'{method} post {req.status_code}')
             return req
         else:
-            error_text = str(req.text)
-            logger.error(f'{method} post {req.status_code} {error_text}')
+
+            if req.status_code == 429:
+                retry_after = req.headers.get('Retry-After', None)
+
+                if retry_after:
+                    logger.warning(f'{method} rate limit reached: retrying in {retry_after} seconds')
+                    time.sleep(int(retry_after))
+                    return self._make_post_request(method, url, params, json, headers)
+                else:
+                    logger.error(f'{method} rate limit reached: cannot find Retry-After header')
+
+            else:
+                error_text = str(req.text)
+                logger.error(f'{method} post {req.status_code} {error_text}')
 
         return None
 
@@ -54,8 +79,20 @@ class Network:
             logger.debug(f'{method} put {req.status_code}')
             return req
         else:
-            error_text = str(req.text)
-            logger.error(f'{method} put {req.status_code} {error_text}')
+
+            if req.status_code == 429:
+                retry_after = req.headers.get('Retry-After', None)
+
+                if retry_after:
+                    logger.warning(f'{method} rate limit reached: retrying in {retry_after} seconds')
+                    time.sleep(int(retry_after))
+                    return self._make_put_request(method, url, params, json, headers)
+                else:
+                    logger.error(f'{method} rate limit reached: cannot find Retry-After header')
+
+            else:
+                error_text = str(req.text)
+                logger.error(f'{method} put {req.status_code} {error_text}')
 
         return None
 
@@ -112,7 +149,7 @@ class Network:
 
             # playlists = playlists + resp['items']
 
-            if resp['next']:
+            if resp.get('next', None):
                 more_playlists = self.get_playlists(offset + limit)
                 if more_playlists:
                     playlists += more_playlists
@@ -150,14 +187,13 @@ class Network:
                 tracks += resp['items']
             else:
                 logger.warning(f'{playlistid} no items returned')
+
+            if resp.get('next', None):
+                more_tracks = self.get_playlist_tracks(playlistid, offset + limit)
+                if more_tracks:
+                    tracks += more_tracks
         else:
             logger.warning(f'{playlistid} error on response')
-
-        if resp.get('next', None):
-
-            more_tracks = self.get_playlist_tracks(playlistid, offset + limit)
-            if more_tracks:
-                tracks += more_tracks
 
         return tracks
 
