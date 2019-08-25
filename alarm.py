@@ -59,7 +59,7 @@ if __name__ == '__main__':
                 else:
                     playlisturi = data['alarm']['uri']
 
-                network.play(playlisturi, network.get_device_id(data['alarm']['device_name']))
+                network.play(uri=playlisturi, deviceid=network.get_device_id(data['alarm']['device_name']))
 
                 network.set_shuffle(True)
                 network.set_volume(data['alarm']['volume'])
