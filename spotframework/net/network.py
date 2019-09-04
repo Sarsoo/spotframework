@@ -2,7 +2,9 @@ import requests
 import random
 import logging
 import time
+from typing import List
 from . import const
+from spotframework.net.parse import parse
 from spotframework.model.playlist import Playlist
 
 limit = 50
@@ -96,7 +98,7 @@ class Network:
 
         return None
 
-    def get_playlist(self, playlistid):
+    def get_playlist(self, playlistid: str):
 
         logger.info(f"{playlistid}")
 
@@ -140,14 +142,7 @@ class Network:
         if resp:
 
             for responseplaylist in resp['items']:
-
-                playlist = Playlist(responseplaylist['id'], responseplaylist['uri'])
-                playlist.name = responseplaylist['name']
-                playlist.userid = responseplaylist['owner']['id']
-
-                playlists.append(playlist)
-
-            # playlists = playlists + resp['items']
+                playlists.append(parse.parse_playlist(responseplaylist))
 
             if resp.get('next', None):
                 more_playlists = self.get_playlists(offset + limit)
@@ -167,7 +162,7 @@ class Network:
         playlists = self.get_playlists()
 
         if playlists:
-            return list(filter(lambda x: x.userid == self.user.username, playlists))
+            return list(filter(lambda x: x.owner.username == self.user.username, playlists))
         else:
             logger.error('no playlists returned to filter')
             return None
@@ -184,7 +179,7 @@ class Network:
 
         if resp:
             if resp.get('items', None):
-                tracks += resp['items']
+                tracks += [parse.parse_track(i) for i in resp.get('items', None)]
             else:
                 logger.warning(f'{playlistid} no items returned')
 
@@ -366,7 +361,7 @@ class Network:
                 logger.error('error updating details')
                 return None
 
-    def add_playlist_tracks(self, playlistid, uris):
+    def add_playlist_tracks(self, playlistid: str, uris: List[str]):
 
         logger.info(f"{playlistid}")
 
@@ -410,7 +405,34 @@ class Network:
         else:
             resp = self._make_get_request('getRecommendations', 'recommendations', params=params)
             if resp:
-                return resp
+                if 'tracks' in resp:
+                    return [parse.parse_track(i) for i in resp['tracks']]
+                else:
+                    logger.error('no tracks returned')
+                    return None
             else:
                 logger.error('error getting recommendations')
                 return None
+
+    def write_playlist_object(self,
+                              playlist: Playlist,
+                              append_tracks: bool = False):
+
+        if playlist.playlist_id:
+            if playlist.tracks == -1:
+                self.replace_playlist_tracks(playlist.playlist_id, [])
+            elif playlist.tracks:
+                if append_tracks:
+                    self.add_playlist_tracks(playlist.playlist_id, [i.uri for i in playlist.tracks])
+                else:
+                    self.replace_playlist_tracks(playlist.playlist_id, [i.uri for i in playlist.tracks])
+
+            if playlist.name or playlist.collaborative or playlist.public or playlist.description:
+                self.change_playlist_details(playlist.playlist_id,
+                                             playlist.name,
+                                             playlist.public,
+                                             playlist.collaborative,
+                                             playlist.description)
+
+        else:
+            logger.error('playlist has no id')

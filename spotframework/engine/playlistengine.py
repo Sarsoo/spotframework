@@ -3,14 +3,21 @@ import os
 import logging
 
 import spotframework.util.monthstrings as monthstrings
-from spotframework.engine.filter.addedsince import AddedSince
+from spotframework.engine.filter.added import AddedSince
+
+from typing import List
+from spotframework.model.track import SpotifyTrack
+from spotframework.model.playlist import Playlist
+from spotframework.net.network import Network
+from spotframework.engine.filter.abstract import AbstractProcessor
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
 
 class PlaylistEngine:
 
-    def __init__(self, net):
+    def __init__(self, net: Network):
         self.playlists = []
         self.net = net
 
@@ -32,16 +39,24 @@ class PlaylistEngine:
         else:
             logger.error('error getting playlists')
 
-    def get_playlist_tracks(self, playlist):
+    def get_playlist_tracks(self,
+                            playlist: Playlist):
         logger.info(f"pulling tracks for {playlist.name}")
 
-        tracks = self.net.get_playlist_tracks(playlist.playlistid)
+        tracks = self.net.get_playlist_tracks(playlist.playlist_id)
         if tracks and len(tracks) > 0:
             playlist.tracks = tracks
         else:
             logger.error('error getting tracks')
 
-    def make_playlist(self, playlist_parts, processors=[], include_recommendations=False, recommendation_limit=10):
+    def make_playlist(self,
+                      playlist_parts: List[str],
+                      processors: List[AbstractProcessor] = None,
+                      include_recommendations: bool = False,
+                      recommendation_limit: int = 10):
+
+        if processors is None:
+            processors = []
 
         tracks = []
 
@@ -56,39 +71,41 @@ class PlaylistEngine:
 
                 playlist_tracks = list(play.tracks)
 
-                for processor in [i for i in processors if play.name in [j for j in i.playlist_names]]:
-                    playlist_tracks = processor.process(playlist_tracks)
+                for processor in [i for i in processors if i.has_targets()]:
+                    if play.name in [i for i in processor.playlist_names]:
+                        playlist_tracks = processor.process(playlist_tracks)
 
-                tracks += [i for i in playlist_tracks if i['is_local'] is False]
+                tracks += [i for i in playlist_tracks if i.is_local is False]
 
             else:
                 logger.warning(f"requested playlist {part} not found")
                 if 'SLACKHOOK' in os.environ:
                     requests.post(os.environ['SLACKHOOK'], json={"text": f"spot playlists: {part} not found"})
 
-        for processor in [i for i in processors if len(i.playlist_names) <= 0]:
+        for processor in [i for i in processors if i.has_targets() is False]:
             tracks = processor.process(tracks)
 
-        tracks = [i['track'] for i in tracks]
-
         if include_recommendations:
-            recommendations = self.net.get_recommendations(tracks=[i['id'] for i in tracks],
+            recommendations = self.net.get_recommendations(tracks=[i.spotify_id for i in tracks],
                                                            response_limit=recommendation_limit)
             if recommendations and len(recommendations) > 0:
-                tracks += recommendations['tracks']
+                tracks += recommendations
             else:
                 logger.error('error getting recommendations')
 
         return tracks
 
     def get_recent_playlist(self,
-                            boundary_date,
-                            recent_playlist_parts,
-                            processors=[],
-                            include_recommendations=False,
-                            recommendation_limit=10,
-                            add_this_month=False,
-                            add_last_month=False):
+                            boundary_date: datetime,
+                            recent_playlist_parts: List[str],
+                            processors: List[AbstractProcessor] = None,
+                            include_recommendations: bool = False,
+                            recommendation_limit: int = 10,
+                            add_this_month: bool = False,
+                            add_last_month: bool = False):
+
+        if processors is None:
+            processors = []
 
         this_month = monthstrings.get_this_month()
         last_month = monthstrings.get_last_month()
@@ -110,16 +127,22 @@ class PlaylistEngine:
                                   include_recommendations=include_recommendations,
                                   recommendation_limit=recommendation_limit)
 
-    def execute_playlist(self, tracks, playlist_id):
+    def execute_playlist(self,
+                         tracks: List[SpotifyTrack],
+                         playlist_id: str):
 
-        resp = self.net.replace_playlist_tracks(playlist_id, [i['uri'] for i in tracks])
+        resp = self.net.replace_playlist_tracks(playlist_id, [i.uri for i in tracks])
         if resp:
             return resp
         else:
             logger.error('error executing')
             return None
 
-    def change_description(self, playlistparts, playlist_id, overwrite=None, suffix=None):
+    def change_description(self,
+                           playlistparts: List[str],
+                           playlist_id: str,
+                           overwrite: bool = None,
+                           suffix: str = None):
 
         if overwrite:
             string = overwrite

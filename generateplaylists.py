@@ -1,13 +1,12 @@
 import spotframework.net.const as const
 from spotframework.net.network import Network
-from spotframework.net.user import User
+from spotframework.net.user import NetworkUser
 import spotframework.io.json as json
 import spotframework.util.monthstrings as monthstrings
 from spotframework.engine.playlistengine import PlaylistEngine
 from spotframework.engine.filter.shuffle import Shuffle
-from spotframework.engine.filter.sortreversereleasedate import SortReverseReleaseDate
-from spotframework.engine.filter.deduplicatebyid import DeduplicateByID
-from spotframework.engine.filter.deduplicatebyname import DeduplicateByName
+from spotframework.engine.filter.sort import SortReverseReleaseDate
+from spotframework.engine.filter.deduplicate import DeduplicateByID, DeduplicateByName
 
 import os
 import datetime
@@ -115,10 +114,10 @@ def go():
                 logger.critical('none to execute, terminating')
                 return
 
-            net = Network(User(os.environ['SPOTCLIENT'],
-                               os.environ['SPOTSECRET'],
-                               os.environ['SPOTACCESS'],
-                               os.environ['SPOTREFRESH']))
+            net = Network(NetworkUser(os.environ['SPOTCLIENT'],
+                                      os.environ['SPOTSECRET'],
+                                      os.environ['SPOTACCESS'],
+                                      os.environ['SPOTREFRESH']))
 
             engine = PlaylistEngine(net)
             engine.load_user_playlists()

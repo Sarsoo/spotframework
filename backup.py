@@ -1,4 +1,4 @@
-from  spotframework.net.user import User
+from  spotframework.net.user import NetworkUser
 from  spotframework.net.network import Network
 import spotframework.io.csv as csvwrite
 
@@ -21,14 +21,14 @@ if __name__ == '__main__':
 
     try:
 
-        network = Network(User(os.environ['SPOTCLIENT'],
-                               os.environ['SPOTSECRET'],
-                               os.environ['SPOTACCESS'],
-                               os.environ['SPOTREFRESH']))
+        network = Network(NetworkUser(os.environ['SPOTCLIENT'],
+                                      os.environ['SPOTSECRET'],
+                                      os.environ['SPOTACCESS'],
+                                      os.environ['SPOTREFRESH']))
         playlists = network.get_user_playlists()
 
         for playlist in playlists:
-            playlist.tracks = network.get_playlist_tracks(playlist.playlistid)
+            playlist.tracks = network.get_playlist_tracks(playlist.playlist_id)
 
         path = sys.argv[1]
 

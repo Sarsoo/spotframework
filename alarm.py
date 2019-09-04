@@ -1,4 +1,4 @@
-from spotframework.net.user import User
+from spotframework.net.user import NetworkUser
 from spotframework.net.network import Network
 import spotframework.net.const as const
 import spotframework.io.json as json
@@ -33,10 +33,10 @@ if __name__ == '__main__':
 
     try:
 
-        network = Network(User(os.environ['SPOTCLIENT'],
-                               os.environ['SPOTSECRET'],
-                               os.environ['SPOTACCESS'],
-                               os.environ['SPOTREFRESH']))
+        network = Network(NetworkUser(os.environ['SPOTCLIENT'],
+                                      os.environ['SPOTSECRET'],
+                                      os.environ['SPOTACCESS'],
+                                      os.environ['SPOTREFRESH']))
 
         found = False
 

@@ -24,15 +24,15 @@ def export_playlist(playlist, path, name=None):
         for track in playlist.tracks:
 
             trackdict = {
-                    'name':track['track']['name'],
-                    'album':track['track']['album']['name'],
-                    'added':track['added_at'],
-                    'track id':track['track']['id'],
-                    'album id':track['track']['album']['id'],
-                    'added by':track['added_by']['id']}
+                'name':track.name,
+                'album':track.album.name,
+                'added':track.added_at,
+                'track id':track.spotify_id,
+                'album id':track.album.spotify_id,
+                'added by':track.added_by.username}
 
-            trackdict['album artist'] = ', '.join(x['name'] for x in track['track']['album']['artists'])
+            trackdict['album artist'] = ', '.join(x.name for x in track.album.artists)
 
-            trackdict['artist'] = ', '.join(x['name'] for x in track['track']['artists'])
+            trackdict['artist'] = ', '.join(x.name for x in track.artists)
 
             writer.writerow(trackdict)

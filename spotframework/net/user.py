@@ -1,13 +1,16 @@
 import requests
+from spotframework.model.user import User
 from base64 import b64encode
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-class User:
+class NetworkUser(User):
 
     def __init__(self, client_id, client_secret, access_token, refresh_token):
+        super().__init__('')
+
         self.accesstoken = access_token
         self.refreshtoken = refresh_token
 
@@ -15,8 +18,7 @@ class User:
         self.client_secret = client_secret
 
         self.refresh_token()
-
-        self.username = self.get_info()['id']
+        self.refresh_info()
 
     def refresh_token(self):
         
@@ -32,6 +34,25 @@ class User:
             self.accesstoken = req.json()['access_token']
         else:
             logger.error(f'http error {req.status_code}')
+
+    def refresh_info(self):
+        info = self.get_info()
+
+        if info.get('display_name', None):
+            self.display_name = info['display_name']
+
+        if info.get('external_urls', None):
+            if info['external_urls'].get('spotify', None):
+                self.ext_spotify = info['external_urls']['spotify']
+
+        if info.get('href', None):
+            self.href = info['href']
+
+        if info.get('id', None):
+            self.username = info['id']
+
+        if info.get('uri', None):
+            self.uri = info['uri']
 
     def get_info(self):
         
