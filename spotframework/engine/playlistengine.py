@@ -7,7 +7,7 @@ from spotframework.engine.filter.added import AddedSince
 
 from typing import List
 from spotframework.model.track import SpotifyTrack
-from spotframework.model.playlist import Playlist
+from spotframework.model.playlist import SpotifyPlaylist
 from spotframework.net.network import Network
 from spotframework.engine.filter.abstract import AbstractProcessor
 from datetime import datetime
@@ -40,7 +40,7 @@ class PlaylistEngine:
             logger.error('error getting playlists')
 
     def get_playlist_tracks(self,
-                            playlist: Playlist):
+                            playlist: SpotifyPlaylist):
         logger.info(f"pulling tracks for {playlist.name}")
 
         tracks = self.net.get_playlist_tracks(playlist.playlist_id)

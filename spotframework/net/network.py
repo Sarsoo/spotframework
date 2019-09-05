@@ -5,7 +5,7 @@ import time
 from typing import List
 from . import const
 from spotframework.net.parse import parse
-from spotframework.model.playlist import Playlist
+from spotframework.model.playlist import SpotifyPlaylist
 
 limit = 50
 
@@ -33,7 +33,7 @@ class Network:
 
                 if retry_after:
                     logger.warning(f'{method} rate limit reached: retrying in {retry_after} seconds')
-                    time.sleep(int(retry_after))
+                    time.sleep(int(retry_after) + 1)
                     return self._make_get_request(method, url, params, headers)
                 else:
                     logger.error(f'{method} rate limit reached: cannot find Retry-After header')
@@ -60,7 +60,7 @@ class Network:
 
                 if retry_after:
                     logger.warning(f'{method} rate limit reached: retrying in {retry_after} seconds')
-                    time.sleep(int(retry_after))
+                    time.sleep(int(retry_after) + 1)
                     return self._make_post_request(method, url, params, json, headers)
                 else:
                     logger.error(f'{method} rate limit reached: cannot find Retry-After header')
@@ -87,7 +87,7 @@ class Network:
 
                 if retry_after:
                     logger.warning(f'{method} rate limit reached: retrying in {retry_after} seconds')
-                    time.sleep(int(retry_after))
+                    time.sleep(int(retry_after) + 1)
                     return self._make_put_request(method, url, params, json, headers)
                 else:
                     logger.error(f'{method} rate limit reached: cannot find Retry-After header')
@@ -106,7 +106,7 @@ class Network:
 
         if tracks is not None:
 
-            playlist = Playlist(playlistid)
+            playlist = SpotifyPlaylist(playlistid)
             playlist.tracks += tracks
 
             return playlist
@@ -415,7 +415,7 @@ class Network:
                 return None
 
     def write_playlist_object(self,
-                              playlist: Playlist,
+                              playlist: SpotifyPlaylist,
                               append_tracks: bool = False):
 
         if playlist.playlist_id:

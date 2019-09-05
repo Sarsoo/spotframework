@@ -2,6 +2,7 @@ import requests
 from spotframework.model.user import User
 from base64 import b64encode
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +22,15 @@ class NetworkUser(User):
         self.refresh_info()
 
     def refresh_token(self):
+
+        if self.refreshtoken is None:
+            raise NameError('no refresh token to query')
+
+        if self.client_id is None:
+            raise NameError('no client id')
+
+        if self.client_secret is None:
+            raise NameError('no client secret')
         
         idsecret = b64encode(bytes(self.client_id + ':' + self.client_secret, "utf-8")).decode("ascii")
         headers = {'Authorization': 'Basic %s' % idsecret}
@@ -33,7 +43,20 @@ class NetworkUser(User):
             logger.debug('token refreshed')
             self.accesstoken = req.json()['access_token']
         else:
-            logger.error(f'http error {req.status_code}')
+
+            if req.status_code == 429:
+                retry_after = req.headers.get('Retry-After', None)
+
+                if retry_after:
+                    logger.warning(f'refresh_token rate limit reached: retrying in {retry_after} seconds')
+                    time.sleep(int(retry_after) + 1)
+                    return self.refresh_token()
+                else:
+                    logger.error(f'refresh_token rate limit reached: cannot find Retry-After header')
+
+            else:
+                error_text = req.json()['error']['message']
+                logger.error(f'refresh_token get {req.status_code} {error_text}')
 
     def refresh_info(self):
         info = self.get_info()
@@ -64,4 +87,17 @@ class NetworkUser(User):
             logger.debug(f'retrieved {req.status_code}')
             return req.json()
         else:
-            logger.error(f'http error {req.status_code}')
+
+            if req.status_code == 429:
+                retry_after = req.headers.get('Retry-After', None)
+
+                if retry_after:
+                    logger.warning(f'get_info rate limit reached: retrying in {retry_after} seconds')
+                    time.sleep(int(retry_after) + 1)
+                    return self.get_info()
+                else:
+                    logger.error(f'get_info rate limit reached: cannot find Retry-After header')
+
+            else:
+                error_text = req.json()['error']['message']
+                logger.error(f'get_info get {req.status_code} {error_text}')

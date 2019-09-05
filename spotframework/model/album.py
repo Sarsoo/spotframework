@@ -10,6 +10,14 @@ class Album:
         self.name = name
         self.artists = artists
 
+    @property
+    def artists_names(self):
+        return self._join_strings([i.name for i in self.artists])
+
+    @staticmethod
+    def _join_strings(string_list: List[str]):
+        return ' , '.join(string_list)
+
     def __str__(self):
         artists = ' , '.join([i.name for i in self.artists]) if self.artists else 'n/a'
 

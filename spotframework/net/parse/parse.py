@@ -1,7 +1,7 @@
 from spotframework.model.artist import Artist, SpotifyArtist
 from spotframework.model.album import Album, SpotifyAlbum
 from spotframework.model.track import Track, SpotifyTrack, PlaylistTrack
-from spotframework.model.playlist import Playlist
+from spotframework.model.playlist import SpotifyPlaylist
 from spotframework.model.user import User
 
 
@@ -175,12 +175,12 @@ def parse_playlist(playlist_dict):
     public = playlist_dict.get('public', None)
     uri = playlist_dict.get('uri', None)
 
-    return Playlist(playlistid=playlist_id,
-                    name=name,
-                    owner=owner,
-                    description=description,
-                    href=href,
-                    uri=uri,
-                    collaborative=collaborative,
-                    public=public,
-                    ext_spotify=ext_spotify)
+    return SpotifyPlaylist(playlistid=playlist_id,
+                           name=name,
+                           owner=owner,
+                           description=description,
+                           href=href,
+                           uri=uri,
+                           collaborative=collaborative,
+                           public=public,
+                           ext_spotify=ext_spotify)
