@@ -4,9 +4,9 @@ from spotframework.net.user import NetworkUser
 import spotframework.io.json as json
 import spotframework.util.monthstrings as monthstrings
 from spotframework.engine.playlistengine import PlaylistEngine
-from spotframework.engine.filter.shuffle import Shuffle
-from spotframework.engine.filter.sort import SortReleaseDate
-from spotframework.engine.filter.deduplicate import DeduplicateByID, DeduplicateByName
+from spotframework.engine.processor.shuffle import Shuffle
+from spotframework.engine.processor.sort import SortReleaseDate
+from spotframework.engine.processor.deduplicate import DeduplicateByID, DeduplicateByName
 
 import os
 import datetime

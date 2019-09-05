@@ -3,13 +3,13 @@ import os
 import logging
 
 import spotframework.util.monthstrings as monthstrings
-from spotframework.engine.filter.added import AddedSince
+from spotframework.engine.processor.added import AddedSince
 
 from typing import List
 from spotframework.model.track import SpotifyTrack
 from spotframework.model.playlist import SpotifyPlaylist
 from spotframework.net.network import Network
-from spotframework.engine.filter.abstract import AbstractProcessor
+from spotframework.engine.processor.abstract import AbstractProcessor
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
