@@ -5,7 +5,7 @@ import spotframework.io.json as json
 import spotframework.util.monthstrings as monthstrings
 from spotframework.engine.playlistengine import PlaylistEngine
 from spotframework.engine.filter.shuffle import Shuffle
-from spotframework.engine.filter.sort import SortReverseReleaseDate
+from spotframework.engine.filter.sort import SortReleaseDate
 from spotframework.engine.filter.deduplicate import DeduplicateByID, DeduplicateByName
 
 import os
@@ -26,6 +26,14 @@ file_handler.setFormatter(formatter)
 
 logger.addHandler(file_handler)
 
+stream_log_format = '%(levelname)s %(name)s:%(funcName)s - %(message)s'
+stream_formatter = logging.Formatter(stream_log_format)
+
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(stream_formatter)
+
+logger.addHandler(stream_handler)
+
 
 def update_super_playlist(engine, data_dict):
 
@@ -37,9 +45,9 @@ def update_super_playlist(engine, data_dict):
         if data_dict['shuffle'] is True:
             processors.append(Shuffle())
         else:
-            processors.append(SortReverseReleaseDate())
+            processors.append(SortReleaseDate(reverse=True))
     else:
-        processors.append(SortReverseReleaseDate())
+        processors.append(SortReleaseDate(reverse=True))
 
     tracks = engine.make_playlist(data_dict['playlists'], processors)
 
@@ -72,7 +80,7 @@ def update_recents_playlist(engine, data):
         for exclusion in data['recents']['exclude']:
             recent_parts.remove(exclusion)
 
-    processors = [DeduplicateByName(), SortReverseReleaseDate()]
+    processors = [DeduplicateByName(), SortReleaseDate(reverse=True)]
 
     recent_tracks = engine.get_recent_playlist(boundary_date, recent_parts, processors)
     engine.execute_playlist(recent_tracks, recents_id)

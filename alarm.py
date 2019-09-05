@@ -10,13 +10,21 @@ import logging
 
 logger = logging.getLogger('spotframework')
 
-log_format = '%(asctime)s %(levelname)s %(name)s:%(funcName)s - %(message)s'
+file_log_format = '%(asctime)s %(levelname)s %(name)s:%(funcName)s - %(message)s'
 
 file_handler = logging.FileHandler(".spot/alarm.log")
-formatter = logging.Formatter(log_format)
-file_handler.setFormatter(formatter)
+file_formatter = logging.Formatter(file_log_format)
+file_handler.setFormatter(file_formatter)
 
 logger.addHandler(file_handler)
+
+stream_log_format = '%(levelname)s %(name)s:%(funcName)s - %(message)s'
+stream_formatter = logging.Formatter(stream_log_format)
+
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(stream_formatter)
+
+logger.addHandler(stream_handler)
 
 
 def check_phone():

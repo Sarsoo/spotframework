@@ -19,6 +19,14 @@ if __name__ == '__main__':
 
     logger.addHandler(file_handler)
 
+    stream_log_format = '%(levelname)s %(name)s:%(funcName)s - %(message)s'
+    stream_formatter = logging.Formatter(stream_log_format)
+
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(stream_formatter)
+
+    logger.addHandler(stream_handler)
+
     try:
 
         network = Network(NetworkUser(os.environ['SPOTCLIENT'],
