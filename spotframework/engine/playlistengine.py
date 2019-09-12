@@ -163,9 +163,10 @@ class PlaylistEngine:
                     if counter_track.added_at < track.added_at:
                         counter_track = track
 
-            self.net.reorder_playlist_tracks(playlist.playlist_id,
-                                             i + tracks_to_sort.index(counter_track),
-                                             1, i)
+            if counter_track != tracks_to_sort[0]:
+                self.net.reorder_playlist_tracks(playlist.playlist_id,
+                                                 i + tracks_to_sort.index(counter_track),
+                                                 1, i)
             tracks_to_sort.remove(counter_track)
 
     def execute_playlist(self,
