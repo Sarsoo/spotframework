@@ -12,7 +12,7 @@ class DeduplicateByID(BatchSingleTypeAwareProcessor):
                          instance_check=SpotifyTrack,
                          append_malformed=append_malformed)
 
-    def process_batch(self, tracks: List[SpotifyTrack]):
+    def process_batch(self, tracks: List[SpotifyTrack]) -> List[SpotifyTrack]:
         return_tracks = []
 
         for track in tracks:
@@ -24,7 +24,7 @@ class DeduplicateByID(BatchSingleTypeAwareProcessor):
 
 class DeduplicateByName(BatchSingleProcessor):
 
-    def process_batch(self, tracks: List[Track]):
+    def process_batch(self, tracks: List[Track]) -> List[Track]:
         return_tracks = []
 
         for to_check in tracks:

@@ -1,11 +1,11 @@
-from spotframework.model.artist import Artist, SpotifyArtist
-from spotframework.model.album import Album, SpotifyAlbum
+from spotframework.model.artist import SpotifyArtist
+from spotframework.model.album import SpotifyAlbum
 from spotframework.model.track import Track, SpotifyTrack, PlaylistTrack
 from spotframework.model.playlist import SpotifyPlaylist
 from spotframework.model.user import User
 
 
-def parse_artist(artist_dict) -> Artist:
+def parse_artist(artist_dict) -> SpotifyArtist:
 
     name = artist_dict.get('name', None)
 
@@ -28,7 +28,7 @@ def parse_artist(artist_dict) -> Artist:
                          popularity=popularity)
 
 
-def parse_album(album_dict) -> Album:
+def parse_album(album_dict) -> SpotifyAlbum:
 
     name = album_dict.get('name', None)
     if name is None:
@@ -139,7 +139,7 @@ def parse_track(track_dict) -> Track:
                             popularity=popularity)
 
 
-def parse_user(user_dict):
+def parse_user(user_dict) -> User:
     display_name = user_dict.get('display_name', None)
 
     spotify_id = user_dict.get('id', None)
@@ -152,7 +152,7 @@ def parse_user(user_dict):
                 display_name=display_name)
 
 
-def parse_playlist(playlist_dict):
+def parse_playlist(playlist_dict) -> SpotifyPlaylist:
 
     collaborative = playlist_dict.get('collaborative', None)
 

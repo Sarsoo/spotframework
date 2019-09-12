@@ -14,13 +14,13 @@ class BasicReversibleSort(AbstractProcessor, ABC):
 
 class SortReleaseDate(BasicReversibleSort):
 
-    def process(self, tracks: List[Track]):
+    def process(self, tracks: List[Track]) -> List[Track]:
         tracks.sort(key=lambda x: x.album.release_date, reverse=self.reverse)
         return tracks
 
 
 class SortArtistName(BasicReversibleSort):
 
-    def process(self, tracks: List[Track]):
+    def process(self, tracks: List[Track]) -> List[Track]:
         tracks.sort(key=lambda x: x.artists[0].name, reverse=self.reverse)
         return tracks

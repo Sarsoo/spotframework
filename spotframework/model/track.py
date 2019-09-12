@@ -27,11 +27,11 @@ class Track:
         self.explicit = excplicit
 
     @property
-    def artists_names(self):
+    def artists_names(self) -> str:
         return self._join_strings([i.name for i in self.artists])
 
     @property
-    def album_artists_names(self):
+    def album_artists_names(self) -> str:
         return self.album.artists_names
 
     @staticmethod

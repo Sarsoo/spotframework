@@ -8,24 +8,24 @@ class AbstractProcessor(ABC):
     def __init__(self, names: List[str] = None):
         self.playlist_names = names
 
-    def has_targets(self):
+    def has_targets(self) -> bool:
         if self.playlist_names:
             return True
         else:
             return False
 
     @abstractmethod
-    def process(self, tracks: List[Track]):
+    def process(self, tracks: List[Track]) -> List[Track]:
         pass
 
 
 class BatchSingleProcessor(AbstractProcessor, ABC):
 
     @staticmethod
-    def process_single(track: Track):
+    def process_single(track: Track) -> Track:
         return track
 
-    def process_batch(self, tracks: List[Track]):
+    def process_batch(self, tracks: List[Track]) -> List[Track]:
         processed = []
 
         for track in tracks:
@@ -34,8 +34,8 @@ class BatchSingleProcessor(AbstractProcessor, ABC):
 
         return processed
 
-    def process(self, tracks: List[Track]):
-        return [i for i in self.process_batch(tracks) if i]
+    def process(self, tracks: List[Track]) -> List[Track]:
+        return [i for i in self.process_batch(tracks) if i is not None]
 
 
 class BatchSingleTypeAwareProcessor(BatchSingleProcessor, ABC):
@@ -48,7 +48,7 @@ class BatchSingleTypeAwareProcessor(BatchSingleProcessor, ABC):
         self.instance_check = instance_check
         self.append_malformed = append_malformed
 
-    def process(self, tracks: List[Track]):
+    def process(self, tracks: List[Track]) -> List[Track]:
 
         if self.instance_check:
             return_tracks = []

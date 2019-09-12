@@ -16,7 +16,7 @@ class Playlist:
         self.name = name
         self.description = description
 
-    def has_tracks(self):
+    def has_tracks(self) -> bool:
         if len(self.tracks) > 0:
             return True
         else:
@@ -26,7 +26,7 @@ class Playlist:
         return len(self.tracks)
 
     @property
-    def tracks(self):
+    def tracks(self) -> List[Track]:
         return self._tracks
 
     @tracks.setter

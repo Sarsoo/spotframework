@@ -3,6 +3,7 @@ from spotframework.model.user import User
 from base64 import b64encode
 import logging
 import time
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,7 @@ class NetworkUser(User):
         self.refresh_token()
         self.refresh_info()
 
-    def refresh_token(self):
+    def refresh_token(self) -> None:
 
         if self.refreshtoken is None:
             raise NameError('no refresh token to query')
@@ -58,7 +59,7 @@ class NetworkUser(User):
                 error_text = req.json()['error']['message']
                 logger.error(f'refresh_token get {req.status_code} {error_text}')
 
-    def refresh_info(self):
+    def refresh_info(self) -> None:
         info = self.get_info()
 
         if info.get('display_name', None):
@@ -77,7 +78,7 @@ class NetworkUser(User):
         if info.get('uri', None):
             self.uri = info['uri']
 
-    def get_info(self):
+    def get_info(self) -> Optional[dict]:
         
         headers = {'Authorization': 'Bearer %s' % self.accesstoken}
 

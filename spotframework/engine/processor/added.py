@@ -2,6 +2,7 @@ from .abstract import BatchSingleTypeAwareProcessor
 import datetime
 from typing import List
 from spotframework.model.track import PlaylistTrack
+from typing import Optional
 
 
 class Added(BatchSingleTypeAwareProcessor):
@@ -17,12 +18,12 @@ class Added(BatchSingleTypeAwareProcessor):
 
 
 class AddedBefore(Added):
-    def process_single(self, track: PlaylistTrack):
+    def process_single(self, track: PlaylistTrack) -> Optional[PlaylistTrack]:
         if track.added_at < self.boundary:
             return track
 
 
 class AddedSince(Added):
-    def process_single(self, track: PlaylistTrack):
+    def process_single(self, track: PlaylistTrack) -> Optional[PlaylistTrack]:
         if track.added_at > self.boundary:
             return track

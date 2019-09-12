@@ -5,12 +5,13 @@ import logging
 import spotframework.util.monthstrings as monthstrings
 from spotframework.engine.processor.added import AddedSince
 
-from typing import List
+from typing import List, Optional
 from spotframework.model.track import SpotifyTrack
 from spotframework.model.playlist import SpotifyPlaylist
 from spotframework.net.network import Network
 from spotframework.engine.processor.abstract import AbstractProcessor
 from datetime import datetime
+from requests.models import Response
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,7 @@ class PlaylistEngine:
         self.playlists = []
         self.net = net
 
-    def load_user_playlists(self):
+    def load_user_playlists(self) -> None:
         logger.info('loading')
 
         playlists = self.net.get_playlists()
@@ -30,7 +31,7 @@ class PlaylistEngine:
         else:
             logger.error('error getting playlists')
 
-    def append_user_playlists(self):
+    def append_user_playlists(self) -> None:
         logger.info('loading')
 
         playlists = self.net.get_playlists()
@@ -40,7 +41,7 @@ class PlaylistEngine:
             logger.error('error getting playlists')
 
     def get_playlist_tracks(self,
-                            playlist: SpotifyPlaylist):
+                            playlist: SpotifyPlaylist) -> None:
         logger.info(f"pulling tracks for {playlist.name}")
 
         tracks = self.net.get_playlist_tracks(playlist.playlist_id)
@@ -53,7 +54,7 @@ class PlaylistEngine:
                       playlist_parts: List[str],
                       processors: List[AbstractProcessor] = None,
                       include_recommendations: bool = False,
-                      recommendation_limit: int = 10):
+                      recommendation_limit: int = 10) -> List[SpotifyTrack]:
 
         if processors is None:
             processors = []
@@ -102,7 +103,7 @@ class PlaylistEngine:
                             include_recommendations: bool = False,
                             recommendation_limit: int = 10,
                             add_this_month: bool = False,
-                            add_last_month: bool = False):
+                            add_last_month: bool = False) -> List[SpotifyTrack]:
 
         if processors is None:
             processors = []
@@ -129,7 +130,7 @@ class PlaylistEngine:
 
     def execute_playlist(self,
                          tracks: List[SpotifyTrack],
-                         playlist_id: str):
+                         playlist_id: str) -> Optional[Response]:
 
         resp = self.net.replace_playlist_tracks(playlist_id, [i.uri for i in tracks])
         if resp:
@@ -142,7 +143,7 @@ class PlaylistEngine:
                            playlistparts: List[str],
                            playlist_id: str,
                            overwrite: bool = None,
-                           suffix: str = None):
+                           suffix: str = None) -> Optional[Response]:
 
         if overwrite:
             string = overwrite

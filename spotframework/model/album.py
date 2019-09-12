@@ -11,7 +11,7 @@ class Album:
         self.artists = artists
 
     @property
-    def artists_names(self):
+    def artists_names(self) -> str:
         return self._join_strings([i.name for i in self.artists])
 
     @staticmethod

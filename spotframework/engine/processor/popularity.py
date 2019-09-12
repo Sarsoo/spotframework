@@ -14,6 +14,6 @@ class SortPopularity(BatchSingleTypeAwareProcessor):
                          append_malformed=append_malformed)
         self.reverse = reverse
 
-    def process_batch(self, tracks: List[SpotifyTrack]):
+    def process_batch(self, tracks: List[SpotifyTrack]) -> List[SpotifyTrack]:
         tracks.sort(key=lambda x: x.popularity, reverse=self.reverse)
         return tracks

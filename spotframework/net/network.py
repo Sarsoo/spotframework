@@ -2,10 +2,12 @@ import requests
 import random
 import logging
 import time
-from typing import List
+from typing import List, Optional
 from . import const
 from spotframework.net.parse import parse
 from spotframework.model.playlist import SpotifyPlaylist
+from spotframework.model.track import Track, PlaylistTrack
+from requests.models import Response
 
 limit = 50
 
@@ -17,7 +19,7 @@ class Network:
     def __init__(self, user):
         self.user = user
 
-    def _make_get_request(self, method, url, params=None, headers={}):
+    def _make_get_request(self, method, url, params=None, headers={}) -> Optional[dict]:
 
         headers['Authorization'] = 'Bearer ' + self.user.accesstoken
 
@@ -44,7 +46,7 @@ class Network:
 
         return None
 
-    def _make_post_request(self, method, url, params=None, json=None, headers={}):
+    def _make_post_request(self, method, url, params=None, json=None, headers={}) -> Optional[Response]:
 
         headers['Authorization'] = 'Bearer ' + self.user.accesstoken
 
@@ -71,7 +73,7 @@ class Network:
 
         return None
 
-    def _make_put_request(self, method, url, params=None, json=None, headers={}):
+    def _make_put_request(self, method, url, params=None, json=None, headers={}) -> Optional[Response]:
 
         headers['Authorization'] = 'Bearer ' + self.user.accesstoken
 
@@ -98,7 +100,7 @@ class Network:
 
         return None
 
-    def get_playlist(self, playlistid: str):
+    def get_playlist(self, playlistid: str) -> Optional[SpotifyPlaylist]:
 
         logger.info(f"{playlistid}")
 
@@ -114,7 +116,12 @@ class Network:
             logger.error(f"{playlistid} - no tracks returned")
             return None
 
-    def create_playlist(self, username, name='New Playlist', public=True, collaborative=False, description=None):
+    def create_playlist(self,
+                        username,
+                        name='New Playlist',
+                        public=True,
+                        collaborative=False,
+                        description=None) -> Optional[dict]:
 
         json = {"name": name, "public": public, "collaborative": collaborative}
 
@@ -129,7 +136,7 @@ class Network:
             logger.error('error creating playlist')
             return None
 
-    def get_playlists(self, offset=0):
+    def get_playlists(self, offset=0) -> Optional[List[SpotifyPlaylist]]:
 
         logger.info(f"{offset}")
 
@@ -155,7 +162,7 @@ class Network:
             logger.error(f'error getting playlists offset={offset}')
             return None
 
-    def get_user_playlists(self):
+    def get_user_playlists(self) -> Optional[List[SpotifyPlaylist]]:
 
         logger.info('retrieved')
 
@@ -167,7 +174,7 @@ class Network:
             logger.error('no playlists returned to filter')
             return None
 
-    def get_playlist_tracks(self, playlistid, offset=0):
+    def get_playlist_tracks(self, playlistid, offset=0) -> List[PlaylistTrack]:
 
         logger.info(f"{playlistid}{' ' + str(offset) if offset is not 0 else ''}")
 
@@ -192,7 +199,7 @@ class Network:
 
         return tracks
 
-    def get_available_devices(self):
+    def get_available_devices(self) -> Optional[dict]:
 
         logger.info("retrieving")
 
@@ -203,7 +210,7 @@ class Network:
             logger.error('no devices returned')
             return None
 
-    def get_player(self):
+    def get_player(self) -> Optional[dict]:
 
         logger.info("retrieved")
 
@@ -214,7 +221,7 @@ class Network:
             logger.error('no player returned')
             return None
 
-    def get_device_id(self, devicename):
+    def get_device_id(self, devicename) -> Optional[str]:
 
         logger.info(f"{devicename}")
 
@@ -225,7 +232,7 @@ class Network:
             logger.error('no devices returned')
             return None
 
-    def play(self, uri=None, uris=None, deviceid=None):
+    def play(self, uri=None, uris=None, deviceid=None) -> Optional[Response]:
 
         logger.info(f"{uri}{' ' + deviceid if deviceid is not None else ''}")
 
@@ -247,10 +254,12 @@ class Network:
             raise Exception('need either context uri or uris')
 
         req = self._make_put_request('play', 'me/player/play', params=params, json=payload)
-        if req is None:
+        if req:
+            return req
+        else:
             logger.error('error playing')
 
-    def pause(self, deviceid=None):
+    def pause(self, deviceid=None) -> Optional[Response]:
 
         logger.info(f"{deviceid if deviceid is not None else ''}")
 
@@ -260,10 +269,12 @@ class Network:
             params = None
 
         req = self._make_put_request('pause', 'me/player/pause', params=params)
-        if req is None:
+        if req:
+            return req
+        else:
             logger.error('error pausing')
 
-    def next(self, deviceid=None):
+    def next(self, deviceid=None) -> Optional[Response]:
 
         logger.info(f"{deviceid if deviceid is not None else ''}")
 
@@ -273,10 +284,12 @@ class Network:
             params = None
 
         req = self._make_post_request('next', 'me/player/next', params=params)
-        if req is None:
+        if req:
+            return req
+        else:
             logger.error('error skipping')
 
-    def set_shuffle(self, state, deviceid=None):
+    def set_shuffle(self, state, deviceid=None) -> Optional[Response]:
 
         logger.info(f"{state}{' ' + deviceid if deviceid is not None else ''}")
 
@@ -286,10 +299,12 @@ class Network:
             params['device_id'] = deviceid
 
         req = self._make_put_request('setShuffle', 'me/player/shuffle', params=params)
-        if req is None:
+        if req:
+            return req
+        else:
             logger.error(f'error setting shuffle {state}')
 
-    def set_volume(self, volume, deviceid=None):
+    def set_volume(self, volume, deviceid=None) -> Optional[Response]:
 
         logger.info(f"{volume}{' ' + deviceid if deviceid is not None else ''}")
 
@@ -330,7 +345,12 @@ class Network:
         else:
             logger.error(f'error replacing playlist tracks, total: {len(uris)}')
 
-    def change_playlist_details(self, playlistid, name=None, public=None, collaborative=None, description=None):
+    def change_playlist_details(self,
+                                playlistid,
+                                name=None,
+                                public=None,
+                                collaborative=None,
+                                description=None) -> Optional[Response]:
 
         logger.info(f"{playlistid}")
 
@@ -361,7 +381,7 @@ class Network:
                 logger.error('error updating details')
                 return None
 
-    def add_playlist_tracks(self, playlistid: str, uris: List[str]):
+    def add_playlist_tracks(self, playlistid: str, uris: List[str]) -> List[dict]:
 
         logger.info(f"{playlistid}")
 
@@ -386,7 +406,7 @@ class Network:
             logger.error(f'error retrieving tracks {playlistid}, total: {len(uris)}')
             return []
 
-    def get_recommendations(self, tracks=None, artists=None, response_limit=10):
+    def get_recommendations(self, tracks=None, artists=None, response_limit=10) -> Optional[List[Track]]:
 
         logger.info(f'sample size: {response_limit}')
 

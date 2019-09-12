@@ -6,7 +6,7 @@ from spotframework.model.track import Track
 
 class Shuffle(AbstractProcessor):
 
-    def process(self, tracks: List[Track]):
+    def process(self, tracks: List[Track]) -> List[Track]:
         random.shuffle(tracks)
         return tracks
 
@@ -19,5 +19,5 @@ class RandomSample(Shuffle):
         super().__init__(names)
         self.sample_size = sample_size
 
-    def process(self, tracks: List[Track]):
+    def process(self, tracks: List[Track]) -> List[Track]:
         return super().process(tracks)[:self.sample_size]
