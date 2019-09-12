@@ -46,9 +46,17 @@ class Playlist:
         self._tracks = tracks
 
     def __str__(self):
-        headers = ['name', 'album', 'artist', 'added at', 'popularity', 'uri']
+
+        prefix = f'\n==={self.name}===\n\n' if self.name is not None else ''
+
+        table = prefix + self.get_tracks_string() + '\n' + f'total: {len(self)}'
+
+        return table
+
+    def get_tracks_string(self):
 
         rows = []
+        headers = ['name', 'album', 'artist', 'added at', 'popularity', 'uri']
         for track in self.tracks:
             track_row = [track.name,
                          track.album.name,
@@ -60,10 +68,6 @@ class Playlist:
             rows.append(track_row)
 
         table = tabulate(rows, headers=headers, showindex='always', tablefmt="fancy_grid")
-
-        prefix = f'\n==={self.name}===\n\n' if self.name is not None else ''
-
-        table = prefix + table + '\n' + f'total: {len(self)}'
 
         return table
 
@@ -95,3 +99,13 @@ class SpotifyPlaylist(Playlist):
         self.collaborative = collaborative
         self.public = public
         self.ext_spotify = ext_spotify
+
+    def __str__(self):
+
+        prefix = f'\n==={self.name}===\n\n' if self.name is not None else ''
+        prefix += f'id: {self.playlist_id}\n' if self.playlist_id is not None else ''
+        prefix += f'uri: {self.uri}\n' if self.uri is not None else ''
+
+        table = prefix + self.get_tracks_string() + '\n' + f'total: {len(self)}'
+
+        return table

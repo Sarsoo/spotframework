@@ -36,11 +36,11 @@ class Track:
 
     @staticmethod
     def _join_strings(string_list: List[str]):
-        return ' , '.join(string_list)
+        return ', '.join(string_list)
 
     def __str__(self):
         album = self.album.name if self.album else 'n/a'
-        artists = ' , '.join([i.name for i in self.artists]) if self.artists else 'n/a'
+        artists = ', '.join([i.name for i in self.artists]) if self.artists else 'n/a'
 
         return f'{self.name} / {album} / {artists}'
 

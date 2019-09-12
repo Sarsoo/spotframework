@@ -50,6 +50,13 @@ class PlaylistEngine:
         else:
             logger.error('error getting tracks')
 
+    def load_playlist_tracks(self, name: str):
+        playlist = next((i for i in self.playlists if i.name == name), None)
+        if playlist is not None:
+            self.get_playlist_tracks(playlist)
+        else:
+            logger.error(f'playlist {name} not found')
+
     def make_playlist(self,
                       playlist_parts: List[str],
                       processors: List[AbstractProcessor] = None,
@@ -127,6 +134,39 @@ class PlaylistEngine:
                                   processors,
                                   include_recommendations=include_recommendations,
                                   recommendation_limit=recommendation_limit)
+
+    def reorder_playlist_by_added_date(self,
+                                       name: str = None,
+                                       playlistid: str = None,
+                                       reverse: bool = False):
+        if name is None and playlistid is None:
+            logger.error('no playlist name or id provided')
+            raise ValueError('no playlist name or id provided')
+
+        if name:
+            playlist = next((i for i in self.playlists if i.name == name), None)
+        else:
+            playlist = next((i for i in self.playlists if i.spotify_id == playlistid), None)
+
+        if playlist is None:
+            logger.error('playlist not found')
+            return None
+
+        tracks_to_sort = list(playlist.tracks)
+        for i in range(len(playlist)):
+            counter_track = tracks_to_sort[0]
+            for track in tracks_to_sort:
+                if reverse is False:
+                    if counter_track.added_at > track.added_at:
+                        counter_track = track
+                else:
+                    if counter_track.added_at < track.added_at:
+                        counter_track = track
+
+            self.net.reorder_playlist_tracks(playlist.playlist_id,
+                                             i + tracks_to_sort.index(counter_track),
+                                             1, i)
+            tracks_to_sort.remove(counter_track)
 
     def execute_playlist(self,
                          tracks: List[SpotifyTrack],

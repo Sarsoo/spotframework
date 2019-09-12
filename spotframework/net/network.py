@@ -456,3 +456,32 @@ class Network:
 
         else:
             logger.error('playlist has no id')
+
+    def reorder_playlist_tracks(self,
+                                playlistid: str,
+                                range_start: int,
+                                range_length: int,
+                                insert_before: int) -> Optional[Response]:
+
+        logger.info(f'id: {playlistid}')
+
+        if range_start < 0:
+            logger.error('range_start must be positive')
+            raise ValueError('range_start must be positive')
+        if range_length < 0:
+            logger.error('range_length must be positive')
+            raise ValueError('range_length must be positive')
+        if insert_before < 0:
+            logger.error('insert_before must be positive')
+            raise ValueError('insert_before must be positive')
+
+        json = {'range_start': range_start,
+                'range_length': range_length,
+                'insert_before': insert_before}
+
+        resp = self._make_put_request('reorderPlaylistTracks', f'playlists/{playlistid}/tracks', json=json)
+
+        if resp:
+            return resp
+        else:
+            logger.error('error reordering playlist')
