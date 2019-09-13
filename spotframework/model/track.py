@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import List
 from datetime import datetime
+from spotframework.util.console import Color
 if TYPE_CHECKING:
     from spotframework.model.album import Album
     from spotframework.model.artist import Artist
@@ -44,6 +45,10 @@ class Track:
 
         return f'{self.name} / {album} / {artists}'
 
+    def __repr__(self):
+        return Color.YELLOW + Color.BOLD + 'Track' + Color.END + \
+               f': {self.name}, ({self.album}), {self.artists}'
+
 
 class SpotifyTrack(Track):
     def __init__(self,
@@ -73,6 +78,10 @@ class SpotifyTrack(Track):
         self.is_playable = is_playable
 
         self.popularity = popularity
+
+    def __repr__(self):
+        return Color.BOLD + Color.YELLOW + 'SpotifyTrack' + Color.END + \
+               f': {self.name}, ({self.album}), {self.artists}, {self.uri}'
 
 
 class PlaylistTrack(SpotifyTrack):
@@ -110,3 +119,7 @@ class PlaylistTrack(SpotifyTrack):
         self.added_at = datetime.fromisoformat(added_at.replace('T', ' ').replace('Z', ''))
         self.added_by = added_by
         self.is_local = is_local
+
+    def __repr__(self):
+        return Color.BOLD + Color.YELLOW + 'PlaylistTrack' + Color.END + \
+               f': {self.name}, ({self.album}), {self.artists}, {self.uri}, {self.added_at}'

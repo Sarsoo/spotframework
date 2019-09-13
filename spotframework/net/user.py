@@ -1,5 +1,6 @@
 import requests
 from spotframework.model.user import User
+from spotframework.util.console import Color
 from base64 import b64encode
 import logging
 import time
@@ -21,6 +22,10 @@ class NetworkUser(User):
 
         self.refresh_token()
         self.refresh_info()
+
+    def __repr__(self):
+        return Color.RED + Color.BOLD + 'NetworkUser' + Color.END + \
+               f': {self.username}, {self.display_name}, {self.uri}'
 
     def refresh_token(self) -> None:
 
@@ -53,7 +58,7 @@ class NetworkUser(User):
                     time.sleep(int(retry_after) + 1)
                     return self.refresh_token()
                 else:
-                    logger.error(f'refresh_token rate limit reached: cannot find Retry-After header')
+                    logger.error('refresh_token rate limit reached: cannot find Retry-After header')
 
             else:
                 error_text = req.json()['error']['message']
@@ -97,7 +102,12 @@ class NetworkUser(User):
                     time.sleep(int(retry_after) + 1)
                     return self.get_info()
                 else:
-                    logger.error(f'get_info rate limit reached: cannot find Retry-After header')
+                    logger.error('get_info rate limit reached: cannot find Retry-After header')
+
+            elif req.status_code == 401:
+                logger.warning('access token expired, refreshing')
+                self.refresh_token()
+                return self.get_info()
 
             else:
                 error_text = req.json()['error']['message']

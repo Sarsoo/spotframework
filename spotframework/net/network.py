@@ -5,6 +5,7 @@ import time
 from typing import List, Optional
 from . import const
 from spotframework.net.parse import parse
+from spotframework.net.user import NetworkUser
 from spotframework.model.playlist import SpotifyPlaylist
 from spotframework.model.track import Track, PlaylistTrack
 from requests.models import Response
@@ -16,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class Network:
 
-    def __init__(self, user):
+    def __init__(self, user: NetworkUser):
         self.user = user
 
     def _make_get_request(self, method, url, params=None, headers={}) -> Optional[dict]:
@@ -39,6 +40,11 @@ class Network:
                     return self._make_get_request(method, url, params, headers)
                 else:
                     logger.error(f'{method} rate limit reached: cannot find Retry-After header')
+
+            elif req.status_code == 401:
+                logger.warning(f'{method} access token expired, refreshing')
+                self.user.refresh_token()
+                return self._make_get_request(method, url, params, headers)
 
             else:
                 error_text = req.json()['error']['message']
@@ -67,6 +73,11 @@ class Network:
                 else:
                     logger.error(f'{method} rate limit reached: cannot find Retry-After header')
 
+            elif req.status_code == 401:
+                logger.warning(f'{method} access token expired, refreshing')
+                self.user.refresh_token()
+                return self._make_post_request(method, url, params, json, headers)
+
             else:
                 error_text = str(req.text)
                 logger.error(f'{method} post {req.status_code} {error_text}')
@@ -93,6 +104,11 @@ class Network:
                     return self._make_put_request(method, url, params, json, headers)
                 else:
                     logger.error(f'{method} rate limit reached: cannot find Retry-After header')
+
+            elif req.status_code == 401:
+                logger.warning(f'{method} access token expired, refreshing')
+                self.user.refresh_token()
+                return self._make_put_request(method, url, params, json, headers)
 
             else:
                 error_text = str(req.text)

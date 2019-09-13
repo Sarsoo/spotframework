@@ -1,3 +1,4 @@
+from spotframework.util.console import Color
 
 
 class User:
@@ -19,3 +20,7 @@ class User:
 
     def __str__(self):
         return f'{self.username}'
+
+    def __repr__(self):
+        return Color.RED + Color.BOLD + 'User' + Color.END + \
+               f': {self.username}, {self.display_name}, {self.uri}'

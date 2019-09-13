@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 from typing import List
+from spotframework.util.console import Color
 if TYPE_CHECKING:
     from spotframework.model.artist import Artist
 
@@ -22,6 +23,10 @@ class Album:
         artists = ', '.join([i.name for i in self.artists]) if self.artists else 'n/a'
 
         return f'{self.name} / {artists}'
+
+    def __repr__(self):
+        return Color.DARKCYAN + Color.BOLD + 'Album' + Color.END + \
+               f': {self.name}, [{self.artists}]'
 
 
 class SpotifyAlbum(Album):
@@ -56,3 +61,7 @@ class SpotifyAlbum(Album):
 
         self.label = label
         self.popularity = popularity
+
+    def __repr__(self):
+        return Color.DARKCYAN + Color.BOLD + 'SpotifyAlbum' + Color.END + \
+               f': {self.name}, {self.artists}, {self.uri}, {self.tracks}'

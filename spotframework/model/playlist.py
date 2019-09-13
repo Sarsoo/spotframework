@@ -1,5 +1,6 @@
 from spotframework.model.user import User
 from spotframework.model.track import Track, SpotifyTrack, PlaylistTrack
+from spotframework.util.console import Color
 from tabulate import tabulate
 from typing import List
 import logging
@@ -50,8 +51,45 @@ class Playlist:
         prefix = f'\n==={self.name}===\n\n' if self.name is not None else ''
 
         table = prefix + self.get_tracks_string() + '\n' + f'total: {len(self)}'
-
         return table
+
+    def __repr__(self):
+        return Color.GREEN + Color.BOLD + 'Playlist' + Color.END + \
+               f': {self.name}, ({len(self)})'
+
+    def __add__(self, other):
+        if isinstance(other, Track):
+            self.tracks.append(other)
+            return self
+
+        elif isinstance(other, list):
+            if all((isinstance(i, Track) for i in other)):
+                self.tracks += other
+                return self
+            else:
+                logger.error('list not full of tracks')
+                raise TypeError('list not full of tracks')
+
+        else:
+            logger.error('list of tracks needed to add')
+            raise TypeError('list of tracks needed to add')
+
+    def __sub__(self, other):
+        if isinstance(other, Track):
+            self.tracks.remove(other)
+            return self
+
+        elif isinstance(other, list):
+            if all((isinstance(i, Track) for i in other)):
+                self.tracks -= other
+                return self
+            else:
+                logger.error('list not full of tracks')
+                raise TypeError('list not full of tracks')
+
+        else:
+            logger.error('list of tracks needed to subtract')
+            raise TypeError('list of tracks needed to subtract')
 
     def get_tracks_string(self):
 
@@ -109,3 +147,7 @@ class SpotifyPlaylist(Playlist):
         table = prefix + self.get_tracks_string() + '\n' + f'total: {len(self)}'
 
         return table
+
+    def __repr__(self):
+        return Color.GREEN + Color.BOLD + 'SpotifyPlaylist' + Color.END + \
+               f': {self.name} ({self.owner}), ({len(self)}), {self.uri}'

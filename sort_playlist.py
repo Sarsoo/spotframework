@@ -11,7 +11,7 @@ logger = logging.getLogger('spotframework')
 
 log_format = '%(asctime)s %(levelname)s %(name)s - %(funcName)s - %(message)s'
 
-file_handler = logging.FileHandler(".spot/resort_playlist.log")
+file_handler = logging.FileHandler(".spot/sort_playlist.log")
 formatter = logging.Formatter(log_format)
 file_handler.setFormatter(formatter)
 

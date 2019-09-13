@@ -1,4 +1,5 @@
 from typing import List
+from spotframework.util.console import Color
 
 
 class Artist:
@@ -7,6 +8,10 @@ class Artist:
 
     def __str__(self):
         return f'{self.name}'
+
+    def __repr__(self):
+        return Color.PURPLE + Color.BOLD + 'Artist' + Color.END + \
+               f': {self.name}'
 
 
 class SpotifyArtist(Artist):
@@ -30,3 +35,7 @@ class SpotifyArtist(Artist):
         self.genres = genres
 
         self.popularity = popularity
+
+    def __repr__(self):
+        return Color.PURPLE + Color.BOLD + 'SpotifyArtist' + Color.END + \
+               f': {self.name}, {self.uri}'
