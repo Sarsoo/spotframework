@@ -1,4 +1,5 @@
 from __future__ import annotations
+from datetime import datetime
 from typing import TYPE_CHECKING
 from typing import List, Union
 from spotframework.util.console import Color
@@ -67,3 +68,35 @@ class SpotifyAlbum(Album):
     def __repr__(self):
         return Color.DARKCYAN + Color.BOLD + 'SpotifyAlbum' + Color.END + \
                f': {self.name}, {self.artists}, {self.uri}, {self.tracks}'
+
+
+class LibraryAlbum(SpotifyAlbum):
+    def __init__(self,
+                 name: str,
+                 artists: List[Artist],
+
+                 href: str = None,
+                 uri: Union[str, Uri] = None,
+
+                 genres: List[str] = None,
+                 tracks: List = None,
+
+                 release_date: str = None,
+                 release_date_precision: str = None,
+
+                 label: str = None,
+                 popularity: int = None,
+
+                 added_at: datetime = None
+                 ):
+        super().__init__(name=name,
+                         artists=artists,
+                         href=href,
+                         uri=uri,
+                         genres=genres,
+                         tracks=tracks,
+                         release_date=release_date,
+                         release_date_precision=release_date_precision,
+                         label=label,
+                         popularity=popularity)
+        self.added_at = added_at
