@@ -30,7 +30,6 @@ def go(playlist_name):
 
     net = Network(NetworkUser(os.environ['SPOTCLIENT'],
                               os.environ['SPOTSECRET'],
-                              os.environ['SPOTACCESS'],
                               os.environ['SPOTREFRESH']))
 
     engine = PlaylistEngine(net)

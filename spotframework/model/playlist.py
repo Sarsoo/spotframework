@@ -26,6 +26,12 @@ class Playlist:
     def __len__(self):
         return len(self.tracks)
 
+    def __getitem__(self, item) -> Track:
+        return self.tracks[item]
+
+    def __iter__(self):
+        return iter(self.tracks)
+
     @property
     def tracks(self) -> List[Track]:
         return self._tracks

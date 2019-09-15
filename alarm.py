@@ -43,7 +43,6 @@ if __name__ == '__main__':
 
         network = Network(NetworkUser(os.environ['SPOTCLIENT'],
                                       os.environ['SPOTSECRET'],
-                                      os.environ['SPOTACCESS'],
                                       os.environ['SPOTREFRESH']))
 
         found = False

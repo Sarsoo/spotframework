@@ -8,6 +8,7 @@ from spotframework.net.parse import parse
 from spotframework.net.user import NetworkUser
 from spotframework.model.playlist import SpotifyPlaylist
 from spotframework.model.track import Track, PlaylistTrack
+from spotframework.model.service import CurrentlyPlaying, Device
 from requests.models import Response
 
 limit = 50
@@ -28,7 +29,11 @@ class Network:
 
         if 200 <= req.status_code < 300:
             logger.debug(f'{method} get {req.status_code}')
-            return req.json()
+
+            if req.status_code != 204:
+                return req.json()
+            else:
+                return None
         else:
 
             if req.status_code == 429:
@@ -215,37 +220,55 @@ class Network:
 
         return tracks
 
-    def get_available_devices(self) -> Optional[dict]:
+    def get_available_devices(self) -> Optional[List[Device]]:
 
         logger.info("retrieving")
 
         resp = self._make_get_request('getAvailableDevices', 'me/player/devices')
         if resp:
-            return resp
+            return [parse.parse_device(i) for i in resp['devices']]
         else:
             logger.error('no devices returned')
             return None
 
-    def get_player(self) -> Optional[dict]:
+    def get_player(self) -> Optional[CurrentlyPlaying]:
 
         logger.info("retrieved")
 
         resp = self._make_get_request('getPlayer', 'me/player')
         if resp:
-            return resp
+            return parse.parse_currently_playing(resp)
         else:
-            logger.error('no player returned')
+            logger.info('no player returned')
             return None
 
     def get_device_id(self, devicename) -> Optional[str]:
 
         logger.info(f"{devicename}")
 
-        resp = self.get_available_devices()
-        if resp:
-            return next((i for i in resp['devices'] if i['name'] == devicename), None)['id']
+        devices = self.get_available_devices()
+        if devices:
+            device = next((i for i in devices if i.name == devicename), None)
+            if device:
+                return device.device_id
+            else:
+                logger.error(f'{devicename} not found')
         else:
             logger.error('no devices returned')
+
+    def change_playback_device(self, device_id):
+
+        logger.info(device_id)
+
+        json = {
+            'device_ids': [device_id],
+            'play': True
+        }
+
+        resp = self._make_put_request('changePlaybackDevice', 'me/player', json=json)
+        if resp:
+            return True
+        else:
             return None
 
     def play(self, uri=None, uris=None, deviceid=None) -> Optional[Response]:
@@ -260,14 +283,12 @@ class Network:
         if uri and uris:
             raise Exception('wont take both context uri and uris')
 
+        payload = dict()
+
         if uri:
-            payload = {'context_uri': uri}
-
+            payload['context_uri'] = uri
         if uris:
-            payload = {'uris': uris[:200]}
-
-        if not uri and not uris:
-            raise Exception('need either context uri or uris')
+            payload['uris'] = uris[:200]
 
         req = self._make_put_request('play', 'me/player/play', params=params, json=payload)
         if req:
@@ -304,6 +325,21 @@ class Network:
             return req
         else:
             logger.error('error skipping')
+
+    def previous(self, deviceid=None) -> Optional[Response]:
+
+        logger.info(f"{deviceid if deviceid is not None else ''}")
+
+        if deviceid is not None:
+            params = {'device_id': deviceid}
+        else:
+            params = None
+
+        req = self._make_post_request('previous', 'me/player/previous', params=params)
+        if req:
+            return req
+        else:
+            logger.error('error reversing')
 
     def set_shuffle(self, state, deviceid=None) -> Optional[Response]:
 

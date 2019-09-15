@@ -26,13 +26,7 @@ class BatchSingleProcessor(AbstractProcessor, ABC):
         return track
 
     def process_batch(self, tracks: List[Track]) -> List[Track]:
-        processed = []
-
-        for track in tracks:
-            processed_track = self.process_single(track)
-            processed.append(processed_track)
-
-        return processed
+        return [self.process_single(track) for track in tracks]
 
     def process(self, tracks: List[Track]) -> List[Track]:
         return [i for i in self.process_batch(tracks) if i is not None]

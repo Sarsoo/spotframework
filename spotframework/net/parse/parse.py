@@ -3,6 +3,8 @@ from spotframework.model.album import SpotifyAlbum
 from spotframework.model.track import Track, SpotifyTrack, PlaylistTrack
 from spotframework.model.playlist import SpotifyPlaylist
 from spotframework.model.user import User
+from spotframework.model.service import Context, CurrentlyPlaying, Device
+import datetime
 
 
 def parse_artist(artist_dict) -> SpotifyArtist:
@@ -184,3 +186,33 @@ def parse_playlist(playlist_dict) -> SpotifyPlaylist:
                            collaborative=collaborative,
                            public=public,
                            ext_spotify=ext_spotify)
+
+
+def parse_context(context_dict) -> Context:
+    return Context(object_type=context_dict['type'],
+                   href=context_dict['href'],
+                   external_spot=context_dict['external_urls']['spotify'],
+                   uri=context_dict['uri'])
+
+
+def parse_currently_playing(play_dict) -> CurrentlyPlaying:
+    return CurrentlyPlaying(context=parse_context(play_dict['context']) if play_dict['context'] is not None else None,
+                            timestamp=datetime.datetime.fromtimestamp(play_dict['timestamp']/1000),
+                            progress_ms=play_dict['progress_ms'],
+                            is_playing=play_dict['is_playing'],
+                            track=parse_track(play_dict['item']),
+                            device=parse_device(play_dict['device']),
+                            shuffle=play_dict['shuffle_state'],
+                            repeat=play_dict['repeat_state'],
+                            currently_playing_type=play_dict['currently_playing_type'])
+
+
+def parse_device(device_dict) -> Device:
+    return Device(device_id=device_dict['id'],
+                  is_active=device_dict['is_active'],
+                  is_private_session=device_dict['is_private_session'],
+                  is_restricted=device_dict['is_restricted'],
+                  name=device_dict['name'],
+                  object_type=Device.DeviceType[device_dict['type'].upper()],
+                  volume=device_dict['volume_percent'])
+

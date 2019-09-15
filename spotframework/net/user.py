@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 class NetworkUser(User):
 
-    def __init__(self, client_id, client_secret, access_token, refresh_token):
+    def __init__(self, client_id, client_secret, refresh_token, access_token=None):
         super().__init__('')
 
         self.accesstoken = access_token
