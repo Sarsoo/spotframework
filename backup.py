@@ -35,7 +35,7 @@ if __name__ == '__main__':
         playlists = network.get_user_playlists()
 
         for playlist in playlists:
-            playlist.tracks = network.get_playlist_tracks(playlist.playlist_id)
+            playlist.tracks = network.get_playlist_tracks(playlist.uri)
 
         path = sys.argv[1]
 

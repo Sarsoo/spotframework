@@ -1,4 +1,6 @@
 from spotframework.util.console import Color
+from spotframework.model.uri import Uri
+from typing import Union
 
 
 class User:
@@ -6,14 +8,17 @@ class User:
                  username: str,
 
                  href: str = None,
-                 uri: str = None,
+                 uri: Union[str, Uri] = None,
 
                  display_name: str = None,
                  ext_spotify: str = None):
         self.username = username
 
         self.href = href
-        self.uri = uri
+        if isinstance(uri, str):
+            self.uri = Uri(uri)
+        else:
+            self.uri = uri
 
         self.display_name = display_name
         self.ext_spotify = ext_spotify

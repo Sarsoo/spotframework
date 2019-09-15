@@ -1,7 +1,8 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
-from typing import List
+from typing import List, Union
 from spotframework.util.console import Color
+from spotframework.model.uri import Uri
 if TYPE_CHECKING:
     from spotframework.model.artist import Artist
 
@@ -35,8 +36,7 @@ class SpotifyAlbum(Album):
                  artists: List[Artist],
 
                  href: str = None,
-                 spotify_id: str = None,
-                 uri: str = None,
+                 uri: Union[str, Uri] = None,
 
                  genres: List[str] = None,
                  tracks: List = None,
@@ -50,8 +50,10 @@ class SpotifyAlbum(Album):
         super().__init__(name, artists)
 
         self.href = href
-        self.spotify_id = spotify_id
-        self.uri = uri
+        if isinstance(uri, str):
+            self.uri = Uri(uri)
+        else:
+            self.uri = uri
 
         self.genres = genres
         self.tracks = tracks

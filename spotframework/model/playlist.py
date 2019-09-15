@@ -1,8 +1,9 @@
 from spotframework.model.user import User
 from spotframework.model.track import Track, SpotifyTrack, PlaylistTrack
+from spotframework.model.uri import Uri
 from spotframework.util.console import Color
 from tabulate import tabulate
-from typing import List
+from typing import List, Union
 import logging
 
 logger = logging.getLogger(__name__)
@@ -119,14 +120,13 @@ class Playlist:
 class SpotifyPlaylist(Playlist):
 
     def __init__(self,
-                 playlistid: str,
+                 uri: Union[str, Uri],
 
                  name: str = None,
                  owner: User = None,
                  description: str = None,
 
                  href: str = None,
-                 uri: str = None,
 
                  collaborative: bool = None,
                  public: bool = None,
@@ -134,11 +134,13 @@ class SpotifyPlaylist(Playlist):
 
         super().__init__(name=name, description=description)
 
-        self.playlist_id = playlistid
         self.owner = owner
 
         self.href = href
-        self.uri = uri
+        if isinstance(uri, str):
+            self.uri = Uri(uri)
+        else:
+            self.uri = uri
 
         self.collaborative = collaborative
         self.public = public
@@ -147,7 +149,6 @@ class SpotifyPlaylist(Playlist):
     def __str__(self):
 
         prefix = f'\n==={self.name}===\n\n' if self.name is not None else ''
-        prefix += f'id: {self.playlist_id}\n' if self.playlist_id is not None else ''
         prefix += f'uri: {self.uri}\n' if self.uri is not None else ''
 
         table = prefix + self.get_tracks_string() + '\n' + f'total: {len(self)}'

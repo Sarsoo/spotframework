@@ -1,15 +1,20 @@
 from datetime import datetime
 from spotframework.model.track import Track
+from spotframework.model.uri import Uri
 from enum import Enum
+from typing import Union
 
 
 class Context:
     def __init__(self,
-                 uri: str,
+                 uri: Union[str, Uri],
                  object_type: str = None,
                  href: str = None,
                  external_spot: str = None):
-        self.uri = uri
+        if isinstance(uri, str):
+            self.uri = Uri(uri)
+        else:
+            self.uri = uri
         self.object_type = object_type
         self.href = href
         self.external_spot = external_spot

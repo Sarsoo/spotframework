@@ -2,6 +2,7 @@ from spotframework.net.user import NetworkUser
 from spotframework.net.network import Network
 import spotframework.net.const as const
 import spotframework.io.json as json
+import spotframework.util.monthstrings as month
 
 import os
 import datetime
@@ -62,7 +63,8 @@ if __name__ == '__main__':
                 playlists = network.get_user_playlists()
 
                 if data['alarm']['use_month']:
-                    playlisturi = next((i.uri for i in playlists if i.name == date.strftime("%B %-y").lower()), data['alarm']['uri'])
+                    playlisturi = next((i.uri for i in playlists if i.name == month.get_this_month()),
+                                       data['alarm']['uri'])
                 else:
                     playlisturi = data['alarm']['uri']
 

@@ -3,12 +3,14 @@ import random
 import logging
 import time
 from typing import List, Optional
+from datetime import datetime
 from . import const
 from spotframework.net.parse import parse
 from spotframework.net.user import NetworkUser
 from spotframework.model.playlist import SpotifyPlaylist
-from spotframework.model.track import Track, PlaylistTrack
+from spotframework.model.track import Track, PlaylistTrack, PlayedTrack
 from spotframework.model.service import CurrentlyPlaying, Device
+from spotframework.model.uri import Uri
 from requests.models import Response
 
 limit = 50
@@ -121,20 +123,20 @@ class Network:
 
         return None
 
-    def get_playlist(self, playlistid: str) -> Optional[SpotifyPlaylist]:
+    def get_playlist(self, uri: Uri) -> Optional[SpotifyPlaylist]:
 
-        logger.info(f"{playlistid}")
+        logger.info(f"{uri}")
 
-        tracks = self.get_playlist_tracks(playlistid)
+        tracks = self.get_playlist_tracks(uri)
 
         if tracks is not None:
 
-            playlist = SpotifyPlaylist(playlistid)
+            playlist = SpotifyPlaylist(uri.object_id)
             playlist.tracks += tracks
 
             return playlist
         else:
-            logger.error(f"{playlistid} - no tracks returned")
+            logger.error(f"{uri} - no tracks returned")
             return None
 
     def create_playlist(self,
@@ -142,7 +144,7 @@ class Network:
                         name='New Playlist',
                         public=True,
                         collaborative=False,
-                        description=None) -> Optional[dict]:
+                        description=None) -> Optional[SpotifyPlaylist]:
 
         json = {"name": name, "public": public, "collaborative": collaborative}
 
@@ -152,7 +154,7 @@ class Network:
         req = self._make_post_request('createPlaylist', f'users/{username}/playlists', json=json)
 
         if 200 <= req.status_code < 300:
-            return req.json()
+            return parse.parse_playlist(req.json())
         else:
             logger.error('error creating playlist')
             return None
@@ -195,28 +197,28 @@ class Network:
             logger.error('no playlists returned to filter')
             return None
 
-    def get_playlist_tracks(self, playlistid, offset=0) -> List[PlaylistTrack]:
+    def get_playlist_tracks(self, uri: Uri, offset=0) -> List[PlaylistTrack]:
 
-        logger.info(f"{playlistid}{' ' + str(offset) if offset is not 0 else ''}")
+        logger.info(f"{uri}{' ' + str(offset) if offset is not 0 else ''}")
 
         tracks = []
 
         params = {'offset': offset, 'limit': limit}
 
-        resp = self._make_get_request('getPlaylistTracks', f'playlists/{playlistid}/tracks', params=params)
+        resp = self._make_get_request('getPlaylistTracks', f'playlists/{uri.object_id}/tracks', params=params)
 
         if resp:
             if resp.get('items', None):
                 tracks += [parse.parse_track(i) for i in resp.get('items', None)]
             else:
-                logger.warning(f'{playlistid} no items returned')
+                logger.warning(f'{uri} no items returned')
 
             if resp.get('next', None):
-                more_tracks = self.get_playlist_tracks(playlistid, offset + limit)
+                more_tracks = self.get_playlist_tracks(uri, offset + limit)
                 if more_tracks:
                     tracks += more_tracks
         else:
-            logger.warning(f'{playlistid} error on response')
+            logger.warning(f'{uri} error on response')
 
         return tracks
 
@@ -229,6 +231,32 @@ class Network:
             return [parse.parse_device(i) for i in resp['devices']]
         else:
             logger.error('no devices returned')
+            return None
+
+    def get_recently_played_tracks(self,
+                                   response_limit: int = None,
+                                   after: datetime = None,
+                                   before: datetime = None) -> Optional[List[PlayedTrack]]:
+
+        logger.info("retrieving")
+
+        params = dict()
+
+        if response_limit:
+            params['limit'] = response_limit
+        if after and before:
+            raise ValueError('cant have before and after')
+        if after:
+            params['after'] = int(after.timestamp() * 1000)
+        if before:
+            params['before'] = int(before.timestamp() * 1000)
+
+        resp = self._make_get_request('getRecentlyPlayedTracks', 'me/player/recently-played', params=params)
+
+        if resp:
+            return [parse.parse_track(i) for i in resp['items']]
+        else:
+            logger.error('no tracks returned')
             return None
 
     def get_player(self) -> Optional[CurrentlyPlaying]:
@@ -271,7 +299,7 @@ class Network:
         else:
             return None
 
-    def play(self, uri=None, uris=None, deviceid=None) -> Optional[Response]:
+    def play(self, uri: Uri = None, uris: List[Uri] = None, deviceid=None) -> Optional[Response]:
 
         logger.info(f"{uri}{' ' + deviceid if deviceid is not None else ''}")
 
@@ -286,9 +314,9 @@ class Network:
         payload = dict()
 
         if uri:
-            payload['context_uri'] = uri
+            payload['context_uri'] = str(uri)
         if uris:
-            payload['uris'] = uris[:200]
+            payload['uris'] = [str(i) for i in uris[:200]]
 
         req = self._make_put_request('play', 'me/player/play', params=params, json=payload)
         if req:
@@ -378,33 +406,34 @@ class Network:
             logger.error(f"{volume} not accepted value")
             return None
 
-    def replace_playlist_tracks(self, playlistid, uris):
+    def replace_playlist_tracks(self, uri: Uri, uris: List[Uri]):
 
-        logger.info(f"{playlistid}")
+        logger.info(f"{uri}")
 
         headers = {"Content-Type": "application/json"}
 
-        json = {"uris": uris[:100]}
+        json = {"uris": [str(i) for i in uris[:100]]}
 
-        req = self._make_put_request('replacePlaylistTracks', f'playlists/{playlistid}/tracks', json=json, headers=headers)
+        req = self._make_put_request('replacePlaylistTracks', f'playlists/{uri.object_id}/tracks',
+                                     json=json, headers=headers)
 
         if req is not None:
 
             if len(uris) > 100:
-                return self.add_playlist_tracks(playlistid, uris[100:])
+                return self.add_playlist_tracks(uri, uris[100:])
 
             return req
         else:
             logger.error(f'error replacing playlist tracks, total: {len(uris)}')
 
     def change_playlist_details(self,
-                                playlistid,
+                                uri: Uri,
                                 name=None,
                                 public=None,
                                 collaborative=None,
                                 description=None) -> Optional[Response]:
 
-        logger.info(f"{playlistid}")
+        logger.info(f"{uri}")
 
         headers = {"Content-Type": "application/json"}
 
@@ -426,22 +455,24 @@ class Network:
             logger.warning('update dictionairy length 0')
             return None
         else:
-            req = self._make_put_request('changePlaylistDetails', f'playlists/{playlistid}', json=json, headers=headers)
+            req = self._make_put_request('changePlaylistDetails', f'playlists/{uri.object_id}',
+                                         json=json, headers=headers)
             if req:
                 return req
             else:
                 logger.error('error updating details')
                 return None
 
-    def add_playlist_tracks(self, playlistid: str, uris: List[str]) -> List[dict]:
+    def add_playlist_tracks(self, uri: Uri, uris: List[Uri]) -> List[dict]:
 
-        logger.info(f"{playlistid}")
+        logger.info(f"{uri}")
 
         headers = {"Content-Type": "application/json"}
 
-        json = {"uris": uris[:100]}
+        json = {"uris": [str(i) for i in uris[:100]]}
 
-        req = self._make_post_request('addPlaylistTracks', f'playlists/{playlistid}/tracks', json=json, headers=headers)
+        req = self._make_post_request('addPlaylistTracks', f'playlists/{uri.object_id}/tracks',
+                                      json=json, headers=headers)
 
         if req is not None:
             resp = req.json()
@@ -450,12 +481,12 @@ class Network:
 
             if len(uris) > 100:
 
-                snapshots += self.add_playlist_tracks(playlistid, uris[100:])
+                snapshots += self.add_playlist_tracks(uri, uris[100:])
 
             return snapshots
 
         else:
-            logger.error(f'error retrieving tracks {playlistid}, total: {len(uris)}')
+            logger.error(f'error retrieving tracks {uri}, total: {len(uris)}')
             return []
 
     def get_recommendations(self, tracks=None, artists=None, response_limit=10) -> Optional[List[Track]]:
@@ -490,17 +521,17 @@ class Network:
                               playlist: SpotifyPlaylist,
                               append_tracks: bool = False):
 
-        if playlist.playlist_id:
+        if playlist.uri:
             if playlist.tracks == -1:
-                self.replace_playlist_tracks(playlist.playlist_id, [])
+                self.replace_playlist_tracks(playlist.uri, [])
             elif playlist.tracks:
                 if append_tracks:
-                    self.add_playlist_tracks(playlist.playlist_id, [i.uri for i in playlist.tracks])
+                    self.add_playlist_tracks(playlist.uri, [i.uri for i in playlist.tracks])
                 else:
-                    self.replace_playlist_tracks(playlist.playlist_id, [i.uri for i in playlist.tracks])
+                    self.replace_playlist_tracks(playlist.uri, [i.uri for i in playlist.tracks])
 
             if playlist.name or playlist.collaborative or playlist.public or playlist.description:
-                self.change_playlist_details(playlist.playlist_id,
+                self.change_playlist_details(playlist.uri,
                                              playlist.name,
                                              playlist.public,
                                              playlist.collaborative,
@@ -510,12 +541,12 @@ class Network:
             logger.error('playlist has no id')
 
     def reorder_playlist_tracks(self,
-                                playlistid: str,
+                                uri: Uri,
                                 range_start: int,
                                 range_length: int,
                                 insert_before: int) -> Optional[Response]:
 
-        logger.info(f'id: {playlistid}')
+        logger.info(f'id: {uri}')
 
         if range_start < 0:
             logger.error('range_start must be positive')
@@ -531,7 +562,7 @@ class Network:
                 'range_length': range_length,
                 'insert_before': insert_before}
 
-        resp = self._make_put_request('reorderPlaylistTracks', f'playlists/{playlistid}/tracks', json=json)
+        resp = self._make_put_request('reorderPlaylistTracks', f'playlists/{uri.object_id}/tracks', json=json)
 
         if resp:
             return resp

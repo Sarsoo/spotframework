@@ -8,6 +8,7 @@ from spotframework.engine.processor.added import AddedSince
 from typing import List, Optional
 from spotframework.model.track import SpotifyTrack
 from spotframework.model.playlist import SpotifyPlaylist
+from spotframework.model.uri import Uri
 from spotframework.net.network import Network
 from spotframework.engine.processor.abstract import AbstractProcessor
 from datetime import datetime
@@ -44,7 +45,7 @@ class PlaylistEngine:
                             playlist: SpotifyPlaylist) -> None:
         logger.info(f"pulling tracks for {playlist.name}")
 
-        tracks = self.net.get_playlist_tracks(playlist.playlist_id)
+        tracks = self.net.get_playlist_tracks(playlist.uri)
         if tracks and len(tracks) > 0:
             playlist.tracks = tracks
         else:
@@ -94,7 +95,7 @@ class PlaylistEngine:
             tracks = processor.process(tracks)
 
         if include_recommendations:
-            recommendations = self.net.get_recommendations(tracks=[i.spotify_id for i in tracks],
+            recommendations = self.net.get_recommendations(tracks=[i.uri.object_id for i in tracks],
                                                            response_limit=recommendation_limit)
             if recommendations and len(recommendations) > 0:
                 tracks += recommendations
@@ -137,16 +138,16 @@ class PlaylistEngine:
 
     def reorder_playlist_by_added_date(self,
                                        name: str = None,
-                                       playlistid: str = None,
+                                       uri: Uri = None,
                                        reverse: bool = False):
-        if name is None and playlistid is None:
+        if name is None and uri is None:
             logger.error('no playlist name or id provided')
             raise ValueError('no playlist name or id provided')
 
         if name:
             playlist = next((i for i in self.playlists if i.name == name), None)
         else:
-            playlist = next((i for i in self.playlists if i.spotify_id == playlistid), None)
+            playlist = next((i for i in self.playlists if i.uri == uri), None)
 
         if playlist is None:
             logger.error('playlist not found')
@@ -171,9 +172,9 @@ class PlaylistEngine:
 
     def execute_playlist(self,
                          tracks: List[SpotifyTrack],
-                         playlist_id: str) -> Optional[Response]:
+                         uri: Uri) -> Optional[Response]:
 
-        resp = self.net.replace_playlist_tracks(playlist_id, [i.uri for i in tracks])
+        resp = self.net.replace_playlist_tracks(uri, [i.uri for i in tracks])
         if resp:
             return resp
         else:
@@ -182,7 +183,7 @@ class PlaylistEngine:
 
     def change_description(self,
                            playlistparts: List[str],
-                           playlist_id: str,
+                           uri: Uri,
                            overwrite: bool = None,
                            suffix: str = None) -> Optional[Response]:
 
@@ -194,7 +195,7 @@ class PlaylistEngine:
         if suffix:
             string += f' - {str(suffix)}'
 
-        resp = self.net.change_playlist_details(playlist_id, description=string)
+        resp = self.net.change_playlist_details(uri, description=string)
         if resp:
             return resp
         else:

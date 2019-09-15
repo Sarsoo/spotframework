@@ -1,10 +1,11 @@
 from spotframework.model.artist import SpotifyArtist
 from spotframework.model.album import SpotifyAlbum
-from spotframework.model.track import Track, SpotifyTrack, PlaylistTrack
+from spotframework.model.track import Track, SpotifyTrack, PlaylistTrack, PlayedTrack
 from spotframework.model.playlist import SpotifyPlaylist
 from spotframework.model.user import User
 from spotframework.model.service import Context, CurrentlyPlaying, Device
 import datetime
+from typing import Union
 
 
 def parse_artist(artist_dict) -> SpotifyArtist:
@@ -12,7 +13,6 @@ def parse_artist(artist_dict) -> SpotifyArtist:
     name = artist_dict.get('name', None)
 
     href = artist_dict.get('href', None)
-    spotify_id = artist_dict.get('id', None)
     uri = artist_dict.get('uri', None)
 
     genres = artist_dict.get('genres', None)
@@ -23,7 +23,6 @@ def parse_artist(artist_dict) -> SpotifyArtist:
 
     return SpotifyArtist(name,
                          href=href,
-                         spotify_id=spotify_id,
                          uri=uri,
 
                          genres=genres,
@@ -39,7 +38,6 @@ def parse_album(album_dict) -> SpotifyAlbum:
     artists = [parse_artist(i) for i in album_dict.get('artists', [])]
 
     href = album_dict.get('href', None)
-    spotify_id = album_dict.get('id', None)
     uri = album_dict.get('uri', None)
 
     genres = album_dict.get('genres', None)
@@ -55,7 +53,6 @@ def parse_album(album_dict) -> SpotifyAlbum:
                         artists=artists,
 
                         href=href,
-                        spotify_id=spotify_id,
                         uri=uri,
 
                         genres=genres,
@@ -68,7 +65,7 @@ def parse_album(album_dict) -> SpotifyAlbum:
                         popularity=popularity)
 
 
-def parse_track(track_dict) -> Track:
+def parse_track(track_dict) -> Union[Track, SpotifyTrack, PlayedTrack]:
 
     if 'track' in track_dict:
         track = track_dict.get('track', None)
@@ -84,12 +81,9 @@ def parse_track(track_dict) -> Track:
     else:
         album = None
 
-    # print(album.name)
-
     artists = [parse_artist(i) for i in track.get('artists', [])]
 
     href = track.get('href', None)
-    spotify_id = track.get('id', None)
     uri = track.get('uri', None)
 
     disc_number = track.get('disc_number', None)
@@ -101,9 +95,16 @@ def parse_track(track_dict) -> Track:
 
     added_by = parse_user(track_dict.get('added_by')) if track_dict.get('added_by', None) else None
     added_at = track_dict.get('added_at', None)
+    if added_at:
+        added_at = datetime.datetime.strptime(added_at, '%Y-%m-%dT%H:%M:%S%z')
     is_local = track_dict.get('is_local', None)
 
-    # print(album.name)
+    played_at = track_dict.get('played_at', None)
+    if played_at:
+        played_at = datetime.datetime.strptime(played_at, '%Y-%m-%dT%H:%M:%S.%f%z')
+    context = track_dict.get('context', None)
+    if context:
+        context = parse_context(context)
 
     if added_at or added_by or is_local:
         return PlaylistTrack(name=name,
@@ -115,7 +116,6 @@ def parse_track(track_dict) -> Track:
                              is_local=is_local,
 
                              href=href,
-                             spotify_id=spotify_id,
                              uri=uri,
 
                              disc_number=disc_number,
@@ -124,13 +124,28 @@ def parse_track(track_dict) -> Track:
                              is_playable=is_playable,
 
                              popularity=popularity)
+    elif played_at or context:
+        return PlayedTrack(name=name,
+                           album=album,
+                           artists=artists,
+
+                           href=href,
+                           uri=uri,
+
+                           disc_number=disc_number,
+                           duration_ms=duration_ms,
+                           explicit=explicit,
+                           is_playable=is_playable,
+
+                           popularity=popularity,
+                           played_at=played_at,
+                           context=context)
     else:
         return SpotifyTrack(name=name,
                             album=album,
                             artists=artists,
 
                             href=href,
-                            spotify_id=spotify_id,
                             uri=uri,
 
                             disc_number=disc_number,
@@ -164,7 +179,6 @@ def parse_playlist(playlist_dict) -> SpotifyPlaylist:
             ext_spotify = playlist_dict['external_urls']['spotify']
 
     href = playlist_dict.get('href', None)
-    playlist_id = playlist_dict.get('id', None)
     description = playlist_dict.get('description', None)
 
     name = playlist_dict.get('name', None)
@@ -177,12 +191,11 @@ def parse_playlist(playlist_dict) -> SpotifyPlaylist:
     public = playlist_dict.get('public', None)
     uri = playlist_dict.get('uri', None)
 
-    return SpotifyPlaylist(playlistid=playlist_id,
+    return SpotifyPlaylist(uri=uri,
                            name=name,
                            owner=owner,
                            description=description,
                            href=href,
-                           uri=uri,
                            collaborative=collaborative,
                            public=public,
                            ext_spotify=ext_spotify)

@@ -1,5 +1,6 @@
-from typing import List
+from typing import List, Union
 from spotframework.util.console import Color
+from spotframework.model.uri import Uri
 
 
 class Artist:
@@ -19,8 +20,7 @@ class SpotifyArtist(Artist):
                  name: str,
 
                  href: str = None,
-                 spotify_id: str = None,
-                 uri: str = None,
+                 uri: Union[str, Uri] = None,
 
                  genres: List[str] = None,
 
@@ -29,8 +29,10 @@ class SpotifyArtist(Artist):
         super().__init__(name)
 
         self.href = href
-        self.spotify_id = spotify_id
-        self.uri = uri
+        if isinstance(uri, str):
+            self.uri = Uri(uri)
+        else:
+            self.uri = uri
 
         self.genres = genres
 

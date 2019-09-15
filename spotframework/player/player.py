@@ -1,7 +1,9 @@
 from spotframework.net.network import Network
 from spotframework.model.track import SpotifyTrack
+from spotframework.model.album import SpotifyAlbum
+from spotframework.model.playlist import SpotifyPlaylist
 from spotframework.model.service import Context, Device
-from typing import List
+from typing import List, Union
 import logging
 logger = logging.getLogger(__name__)
 
@@ -32,7 +34,7 @@ class Player:
             return self.last_status
 
     def play(self,
-             context: Context = None,
+             context: Union[Context, SpotifyAlbum, SpotifyPlaylist] = None,
              tracks: List[SpotifyTrack] = None,
              device: Device = None):
         if context and tracks:
