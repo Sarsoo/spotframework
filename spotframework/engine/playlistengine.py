@@ -1,6 +1,7 @@
 import requests
 import os
 import logging
+import copy
 
 import spotframework.util.monthstrings as monthstrings
 from spotframework.engine.processor.added import AddedSince
@@ -21,6 +22,7 @@ class PlaylistEngine:
 
     def __init__(self, net: Network):
         self.playlists = []
+        self.library_tracks = []
         self.net = net
 
     def load_user_playlists(self) -> None:
@@ -40,6 +42,16 @@ class PlaylistEngine:
             self.playlists += playlists
         else:
             logger.error('error getting playlists')
+
+    def load_library_tracks(self, track_limit: int = None) -> None:
+        logger.info('loading')
+
+        if track_limit:
+            tracks = self.net.get_library_tracks(response_limit=track_limit)
+        else:
+            tracks = self.net.get_library_tracks()
+        if tracks and len(tracks) > 0:
+            self.library_tracks = tracks
 
     def get_playlist_tracks(self,
                             playlist: SpotifyPlaylist) -> None:
@@ -62,10 +74,16 @@ class PlaylistEngine:
                       playlist_parts: List[str],
                       processors: List[AbstractProcessor] = None,
                       include_recommendations: bool = False,
-                      recommendation_limit: int = 10) -> List[SpotifyTrack]:
+                      recommendation_limit: int = 10,
+
+                      include_library_tracks: bool = False,
+                      library_processors: List[AbstractProcessor] = None) -> List[SpotifyTrack]:
 
         if processors is None:
             processors = []
+
+        if library_processors is None:
+            library_processors = []
 
         tracks = []
 
@@ -78,7 +96,7 @@ class PlaylistEngine:
                 if play.has_tracks() is False:
                     self.get_playlist_tracks(play)
 
-                playlist_tracks = list(play.tracks)
+                playlist_tracks = copy.deepcopy(play.tracks)
 
                 for processor in [i for i in processors if i.has_targets()]:
                     if play.name in [i for i in processor.playlist_names]:
@@ -93,6 +111,13 @@ class PlaylistEngine:
 
         for processor in [i for i in processors if i.has_targets() is False]:
             tracks = processor.process(tracks)
+
+        if include_library_tracks:
+            library_tracks = copy.deepcopy(self.library_tracks)
+            for processor in library_processors:
+                library_tracks = processor.process(library_tracks)
+
+            tracks += library_tracks
 
         if include_recommendations:
             recommendations = self.net.get_recommendations(tracks=[i.uri.object_id for i in tracks],

@@ -10,7 +10,7 @@ from spotframework.model.user import User
 from . import const
 from spotframework.net.user import NetworkUser
 from spotframework.model.playlist import SpotifyPlaylist
-from spotframework.model.track import Track, SpotifyTrack, PlaylistTrack, PlayedTrack
+from spotframework.model.track import Track, SpotifyTrack, PlaylistTrack, PlayedTrack, LibraryTrack
 from spotframework.model.album import LibraryAlbum, SpotifyAlbum
 from spotframework.model.service import CurrentlyPlaying, Device, Context
 from spotframework.model.uri import Uri
@@ -191,12 +191,25 @@ class Network:
 
         logger.info(f"loading")
 
-        pager = PageCollection(net=self, url='me/albums', name='getLibrary')
+        pager = PageCollection(net=self, url='me/albums', name='getLibraryAlbums')
         if response_limit:
             pager.total_limit = response_limit
         pager.iterate()
 
         return_items = [self.parse_album(i) for i in pager.items]
+
+        return return_items
+
+    def get_library_tracks(self, response_limit: int = None) -> Optional[List[LibraryAlbum]]:
+
+        logger.info(f"loading")
+
+        pager = PageCollection(net=self, url='me/tracks', name='getLibraryTracks')
+        if response_limit:
+            pager.total_limit = response_limit
+        pager.iterate()
+
+        return_items = [self.parse_track(i) for i in pager.items]
 
         return return_items
 
@@ -711,7 +724,7 @@ class Network:
         if context:
             context = self.parse_context(context)
 
-        if added_at or added_by or is_local:
+        if added_by or is_local:
             return PlaylistTrack(name=name,
                                  album=album,
                                  artists=artists,
@@ -729,6 +742,21 @@ class Network:
                                  is_playable=is_playable,
 
                                  popularity=popularity)
+        elif added_at:
+            return LibraryTrack(name=name,
+                                album=album,
+                                artists=artists,
+
+                                href=href,
+                                uri=uri,
+
+                                disc_number=disc_number,
+                                duration_ms=duration_ms,
+                                explicit=explicit,
+                                is_playable=is_playable,
+
+                                popularity=popularity,
+                                added_at=added_at)
         elif played_at or context:
             return PlayedTrack(name=name,
                                album=album,

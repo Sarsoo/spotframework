@@ -87,6 +87,41 @@ class SpotifyTrack(Track):
                f': {self.name}, ({self.album}), {self.artists}, {self.uri}'
 
 
+class LibraryTrack(SpotifyTrack):
+    def __init__(self,
+                 name: str,
+                 album: Album,
+                 artists: List[Artist],
+
+                 href: str = None,
+                 uri: Union[str, Uri] = None,
+
+                 disc_number: int = None,
+                 duration_ms: int = None,
+                 explicit: bool = None,
+                 is_playable: bool = None,
+
+                 popularity: int = None,
+
+                 added_at: datetime = None
+                 ):
+        super().__init__(name=name, album=album, artists=artists,
+                         href=href,
+                         uri=uri,
+
+                         disc_number=disc_number,
+                         duration_ms=duration_ms,
+                         explicit=explicit,
+                         is_playable=is_playable,
+                         popularity=popularity)
+
+        self.added_at = added_at
+
+    def __repr__(self):
+        return Color.BOLD + Color.YELLOW + 'LibraryTrack' + Color.END + \
+               f': {self.name}, ({self.album}), {self.artists}, {self.uri}, {self.added_at}'
+
+
 class PlaylistTrack(SpotifyTrack):
     def __init__(self,
                  name: str,
