@@ -85,6 +85,8 @@ class PlaylistEngine:
                             processors: List[AbstractProcessor] = None,
                             add_this_month: bool = False,
                             add_last_month: bool = False) -> List[SpotifyTrack]:
+        if processors is None:
+            processors = []
 
         this_month = monthstrings.get_this_month()
         last_month = monthstrings.get_last_month()
