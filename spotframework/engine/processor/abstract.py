@@ -1,15 +1,19 @@
 from abc import ABC, abstractmethod
 from typing import List
 from spotframework.model.track import Track
+from spotframework.model.uri import Uri
 
 
 class AbstractProcessor(ABC):
 
-    def __init__(self, names: List[str] = None):
+    def __init__(self,
+                 names: List[str] = None,
+                 uris: List[Uri] = None):
         self.playlist_names = names
+        self.playlist_uris = uris
 
     def has_targets(self) -> bool:
-        if self.playlist_names:
+        if self.playlist_names or self.playlist_uris:
             return True
         else:
             return False
@@ -36,10 +40,14 @@ class BatchSingleTypeAwareProcessor(BatchSingleProcessor, ABC):
 
     def __init__(self,
                  names: List[str] = None,
+                 uris: List[Uri] = None,
                  instance_check=None,
                  append_malformed: bool = True):
-        super().__init__(names)
-        self.instance_check = instance_check
+        super().__init__(names, uris)
+        if isinstance(instance_check, list):
+            self.instance_check = instance_check
+        else:
+            self.instance_check = [instance_check]
         self.append_malformed = append_malformed
 
     def process(self, tracks: List[Track]) -> List[Track]:
@@ -50,7 +58,7 @@ class BatchSingleTypeAwareProcessor(BatchSingleProcessor, ABC):
 
             for track in tracks:
 
-                if isinstance(track, self.instance_check):
+                if any(isinstance(track, i) for i in self.instance_check):
                     return_tracks.append(track)
                 else:
                     malformed_tracks.append(track)

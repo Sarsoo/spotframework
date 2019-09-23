@@ -2,13 +2,15 @@ from abc import ABC
 from .abstract import AbstractProcessor, BatchSingleTypeAwareProcessor
 from typing import List
 from spotframework.model.track import Track, PlaylistTrack
+from spotframework.model.uri import Uri
 
 
 class BasicReversibleSort(AbstractProcessor, ABC):
     def __init__(self,
                  names: List[str] = None,
+                 uris: List[Uri] = None,
                  reverse: bool = False):
-        super().__init__(names)
+        super().__init__(names=names, uris=uris)
         self.reverse = reverse
 
 
@@ -30,9 +32,11 @@ class SortAddedDate(BatchSingleTypeAwareProcessor):
 
     def __init__(self,
                  names: List[str] = None,
+                 uris: List[Uri] = None,
                  reverse: bool = False,
                  append_malformed: bool = True):
         super().__init__(names=names,
+                         uris=uris,
                          instance_check=PlaylistTrack,
                          append_malformed=append_malformed)
         self.reverse = reverse

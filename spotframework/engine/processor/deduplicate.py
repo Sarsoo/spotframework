@@ -1,14 +1,17 @@
 from spotframework.engine.processor.abstract import BatchSingleProcessor, BatchSingleTypeAwareProcessor
 from typing import List
 from spotframework.model.track import Track, SpotifyTrack
+from spotframework.model.uri import Uri
 
 
 class DeduplicateByID(BatchSingleTypeAwareProcessor):
 
     def __init__(self,
                  names: List[str] = None,
+                 uris: List[Uri] = None,
                  append_malformed: bool = True):
-        super().__init__(names,
+        super().__init__(names=names,
+                         uris=uris,
                          instance_check=SpotifyTrack,
                          append_malformed=append_malformed)
 
