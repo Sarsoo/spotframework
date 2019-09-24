@@ -133,6 +133,9 @@ class PlaylistEngine:
             logger.error('playlist not found')
             return None
 
+        if playlist.has_tracks() is False:
+            playlist_source.get_playlist_tracks(playlist)
+
         tracks_to_sort = list(playlist.tracks)
         for i in range(len(playlist)):
             counter_track = tracks_to_sort[0]
@@ -145,7 +148,7 @@ class PlaylistEngine:
                         counter_track = track
 
             if counter_track != tracks_to_sort[0]:
-                self.net.reorder_playlist_tracks(playlist.playlist_id,
+                self.net.reorder_playlist_tracks(playlist.uri,
                                                  i + tracks_to_sort.index(counter_track),
                                                  1, i)
             tracks_to_sort.remove(counter_track)

@@ -33,14 +33,7 @@ def go(playlist_name):
                               os.environ['SPOTREFRESH']))
 
     engine = PlaylistEngine(net)
-    engine.load_user_playlists()
-    playlist = next((j for j in engine.playlists if j.name == playlist_name), None)
-
-    if playlist is not None:
-        engine.get_playlist_tracks(playlist)
-        engine.reorder_playlist_by_added_date(playlist_name)
-    else:
-        logger.error('playlist not found')
+    engine.reorder_playlist_by_added_date(playlist_name)
 
 
 if __name__ == '__main__':
