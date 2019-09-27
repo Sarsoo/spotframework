@@ -15,6 +15,8 @@ class Context:
             self.uri = Uri(uri)
         else:
             self.uri = uri
+        if self.uri.object_type not in [Uri.ObjectType.album, Uri.ObjectType.artist, Uri.ObjectType.playlist]:
+            raise TypeError('context uri must be one of album, artist, playlist')
         self.object_type = object_type
         self.href = href
         self.external_spot = external_spot

@@ -86,6 +86,10 @@ class SpotifyTrack(Track):
         return Color.BOLD + Color.YELLOW + 'SpotifyTrack' + Color.END + \
                f': {self.name}, ({self.album}), {self.artists}, {self.uri}'
 
+    @staticmethod
+    def get_uri_shell(uri):
+        return SpotifyTrack(name=None, album=None, artists=None, uri=uri)
+
 
 class LibraryTrack(SpotifyTrack):
     def __init__(self,

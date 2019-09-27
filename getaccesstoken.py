@@ -18,5 +18,6 @@ if __name__ == '__main__':
     network = Network(NetworkUser(os.environ['SPOTCLIENT'],
                                   os.environ['SPOTSECRET'],
                                   os.environ['SPOTREFRESH']))
+    network.user.refresh_token()
 
     print(network.user.access_token)

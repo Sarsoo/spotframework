@@ -31,6 +31,7 @@ def go(playlist_name):
     net = Network(NetworkUser(os.environ['SPOTCLIENT'],
                               os.environ['SPOTSECRET'],
                               os.environ['SPOTREFRESH']))
+    net.user.refresh_token()
 
     engine = PlaylistEngine(net)
     engine.reorder_playlist_by_added_date(playlist_name)

@@ -5,6 +5,7 @@ from base64 import b64encode
 import logging
 import time
 from typing import Optional
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +21,10 @@ class NetworkUser(User):
         self.client_id = client_id
         self.client_secret = client_secret
 
-        self.refresh_token()
-        self.refresh_info()
+        self.last_refreshed = None
+        self.token_expiry = None
+
+        self.on_refresh = []
 
     def __repr__(self):
         return Color.RED + Color.BOLD + 'NetworkUser' + Color.END + \
@@ -42,12 +45,18 @@ class NetworkUser(User):
         headers = {'Authorization': 'Basic %s' % idsecret}
 
         data = {"grant_type": "refresh_token", "refresh_token": self.refreshtoken}
-    
+
+        now = datetime.now(timezone.utc)
         req = requests.post('https://accounts.spotify.com/api/token', data=data, headers=headers)
    
         if 200 <= req.status_code < 300:
             logger.debug('token refreshed')
-            self.accesstoken = req.json()['access_token']
+            resp = req.json()
+            self.accesstoken = resp['access_token']
+            self.token_expiry = resp['expires_in']
+            self.last_refreshed = now
+            for func in self.on_refresh:
+                func(self)
         else:
 
             if req.status_code == 429:
