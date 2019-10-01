@@ -13,10 +13,10 @@ logger = logging.getLogger(__name__)
 class NetworkUser(User):
 
     def __init__(self, client_id, client_secret, refresh_token, access_token=None):
-        super().__init__('')
+        super().__init__(None)
 
-        self.accesstoken = access_token
-        self.refreshtoken = refresh_token
+        self.access_token = access_token
+        self.refresh_token = refresh_token
 
         self.client_id = client_id
         self.client_secret = client_secret
@@ -30,9 +30,9 @@ class NetworkUser(User):
         return Color.RED + Color.BOLD + 'NetworkUser' + Color.END + \
                f': {self.username}, {self.display_name}, {self.uri}'
 
-    def refresh_token(self) -> None:
+    def refresh_access_token(self) -> None:
 
-        if self.refreshtoken is None:
+        if self.refresh_token is None:
             raise NameError('no refresh token to query')
 
         if self.client_id is None:
@@ -44,7 +44,7 @@ class NetworkUser(User):
         idsecret = b64encode(bytes(self.client_id + ':' + self.client_secret, "utf-8")).decode("ascii")
         headers = {'Authorization': 'Basic %s' % idsecret}
 
-        data = {"grant_type": "refresh_token", "refresh_token": self.refreshtoken}
+        data = {"grant_type": "refresh_token", "refresh_token": self.refresh_token}
 
         now = datetime.now(timezone.utc)
         req = requests.post('https://accounts.spotify.com/api/token', data=data, headers=headers)
@@ -52,7 +52,9 @@ class NetworkUser(User):
         if 200 <= req.status_code < 300:
             logger.debug('token refreshed')
             resp = req.json()
-            self.accesstoken = resp['access_token']
+            self.access_token = resp['access_token']
+            if resp.get('refresh_token', None):
+                self.refresh_token = resp['refresh_token']
             self.token_expiry = resp['expires_in']
             self.last_refreshed = now
             for func in self.on_refresh:
@@ -94,7 +96,7 @@ class NetworkUser(User):
 
     def get_info(self) -> Optional[dict]:
         
-        headers = {'Authorization': 'Bearer %s' % self.accesstoken}
+        headers = {'Authorization': 'Bearer %s' % self.access_token}
 
         req = requests.get('https://api.spotify.com/v1/me', headers=headers)
 

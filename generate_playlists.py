@@ -125,7 +125,7 @@ def go():
             net = Network(NetworkUser(os.environ['SPOTCLIENT'],
                                       os.environ['SPOTSECRET'],
                                       os.environ['SPOTREFRESH']))
-            net.user.refresh_token()
+            net.user.refresh_access_token()
 
             engine = PlaylistEngine(net)
 

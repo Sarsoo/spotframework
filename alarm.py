@@ -45,7 +45,7 @@ if __name__ == '__main__':
         network = Network(NetworkUser(os.environ['SPOTCLIENT'],
                                       os.environ['SPOTSECRET'],
                                       os.environ['SPOTREFRESH']))
-        network.user.refresh_token()
+        network.user.refresh_access_token()
 
         found = False
 

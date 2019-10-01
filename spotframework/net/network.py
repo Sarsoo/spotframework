@@ -31,7 +31,7 @@ class Network:
         if headers is None:
             headers = dict()
 
-        headers['Authorization'] = 'Bearer ' + self.user.accesstoken
+        headers['Authorization'] = 'Bearer ' + self.user.access_token
 
         if whole_url:
             req = requests.get(whole_url, params=params, headers=headers)
@@ -73,7 +73,7 @@ class Network:
         if headers is None:
             headers = dict()
 
-        headers['Authorization'] = 'Bearer ' + self.user.accesstoken
+        headers['Authorization'] = 'Bearer ' + self.user.access_token
 
         req = requests.post(const.api_url + url, params=params, json=json, headers=headers)
 
@@ -108,7 +108,7 @@ class Network:
         if headers is None:
             headers = dict()
 
-        headers['Authorization'] = 'Bearer ' + self.user.accesstoken
+        headers['Authorization'] = 'Bearer ' + self.user.access_token
 
         req = requests.put(const.api_url + url, params=params, json=json, headers=headers)
 

@@ -36,7 +36,13 @@ class Player:
     def play(self,
              context: Union[Context, SpotifyAlbum, SpotifyPlaylist] = None,
              tracks: List[SpotifyTrack] = None,
-             device: Device = None):
+             device: Device = None,
+             device_name: str = None):
+        if device_name:
+            searched_device = next((i for i in self.available_devices if i.name == device_name), None)
+            if searched_device:
+                device = searched_device
+
         if context and tracks:
             raise Exception('cant execute context and track list')
         if context:
