@@ -10,7 +10,7 @@ from spotframework.model.user import User
 from . import const
 from spotframework.net.user import NetworkUser
 from spotframework.model.playlist import SpotifyPlaylist
-from spotframework.model.track import Track, SpotifyTrack, PlaylistTrack, PlayedTrack, LibraryTrack
+from spotframework.model.track import Track, SpotifyTrack, PlaylistTrack, PlayedTrack, LibraryTrack, AudioFeatures
 from spotframework.model.album import LibraryAlbum, SpotifyAlbum
 from spotframework.model.service import CurrentlyPlaying, Device, Context
 from spotframework.model.uri import Uri
@@ -139,6 +139,7 @@ class Network:
         return None
 
     def get_playlist(self, uri: Uri) -> Optional[SpotifyPlaylist]:
+        """get playlist object with tracks for uri"""
 
         logger.info(f"{uri}")
 
@@ -147,7 +148,7 @@ class Network:
         if tracks is not None:
 
             playlist = SpotifyPlaylist(uri)
-            playlist.tracks += tracks
+            playlist += tracks
 
             return playlist
         else:
@@ -160,6 +161,7 @@ class Network:
                         public: bool = True,
                         collaborative: bool = False,
                         description: bool = None) -> Optional[SpotifyPlaylist]:
+        """create playlist for user"""
 
         json = {"name": name, "public": public, "collaborative": collaborative}
 
@@ -175,6 +177,7 @@ class Network:
             return None
 
     def get_playlists(self, response_limit: int = None) -> Optional[List[SpotifyPlaylist]]:
+        """get current users playlists"""
 
         logger.info(f"loading")
 
@@ -188,6 +191,7 @@ class Network:
         return return_items
 
     def get_library_albums(self, response_limit: int = None) -> Optional[List[LibraryAlbum]]:
+        """get user library albums"""
 
         logger.info(f"loading")
 
@@ -200,7 +204,8 @@ class Network:
 
         return return_items
 
-    def get_library_tracks(self, response_limit: int = None) -> Optional[List[LibraryAlbum]]:
+    def get_library_tracks(self, response_limit: int = None) -> Optional[List[LibraryTrack]]:
+        """get user library tracks"""
 
         logger.info(f"loading")
 
@@ -214,6 +219,7 @@ class Network:
         return return_items
 
     def get_user_playlists(self) -> Optional[List[SpotifyPlaylist]]:
+        """filter user playlists for those that were user created"""
 
         logger.info('retrieved')
 
@@ -226,6 +232,7 @@ class Network:
             return None
 
     def get_playlist_tracks(self, uri: Uri, response_limit: int = None) -> List[PlaylistTrack]:
+        """get list of playlists tracks for uri"""
 
         logger.info(f"loading")
 
@@ -239,6 +246,7 @@ class Network:
         return return_items
 
     def get_available_devices(self) -> Optional[List[Device]]:
+        """get users available devices"""
 
         logger.info("retrieving")
 
@@ -253,6 +261,8 @@ class Network:
                                    response_limit: int = None,
                                    after: datetime.datetime = None,
                                    before: datetime.datetime = None) -> Optional[List[PlayedTrack]]:
+        """get list of recently played tracks"""
+
         logger.info("retrieving")
 
         params = dict()
@@ -279,6 +289,7 @@ class Network:
             return None
 
     def get_player(self) -> Optional[CurrentlyPlaying]:
+        """get currently playing snapshot (player)"""
 
         logger.info("retrieved")
 
@@ -289,21 +300,23 @@ class Network:
             logger.info('no player returned')
             return None
 
-    def get_device_id(self, devicename: str) -> Optional[str]:
+    def get_device_id(self, device_name: str) -> Optional[str]:
+        """return device id of device as searched for by name"""
 
-        logger.info(f"{devicename}")
+        logger.info(f"{device_name}")
 
         devices = self.get_available_devices()
         if devices:
-            device = next((i for i in devices if i.name == devicename), None)
+            device = next((i for i in devices if i.name == device_name), None)
             if device:
                 return device.device_id
             else:
-                logger.error(f'{devicename} not found')
+                logger.error(f'{device_name} not found')
         else:
             logger.error('no devices returned')
 
     def change_playback_device(self, device_id: str):
+        """migrate playback to different device"""
 
         logger.info(device_id)
 
@@ -319,6 +332,7 @@ class Network:
             return None
 
     def play(self, uri: Uri = None, uris: List[Uri] = None, deviceid: str = None) -> Optional[Response]:
+        """begin playback"""
 
         logger.info(f"{uri}{' ' + deviceid if deviceid is not None else ''}")
 
@@ -344,6 +358,7 @@ class Network:
             logger.error('error playing')
 
     def pause(self, deviceid: str = None) -> Optional[Response]:
+        """pause playback"""
 
         logger.info(f"{deviceid if deviceid is not None else ''}")
 
@@ -359,6 +374,7 @@ class Network:
             logger.error('error pausing')
 
     def next(self, deviceid: str = None) -> Optional[Response]:
+        """skip track playback"""
 
         logger.info(f"{deviceid if deviceid is not None else ''}")
 
@@ -374,6 +390,7 @@ class Network:
             logger.error('error skipping')
 
     def previous(self, deviceid: str = None) -> Optional[Response]:
+        """skip playback backwards"""
 
         logger.info(f"{deviceid if deviceid is not None else ''}")
 
@@ -590,6 +607,59 @@ class Network:
         else:
             logger.error('error reordering playlist')
 
+    def get_track_audio_features(self, uris: List[Uri]):
+        logger.info(f'ids: {len(uris)}')
+
+        audio_features = []
+        chunked_uris = list(self.chunk(uris, 100))
+        for chunk in chunked_uris:
+            resp = self.make_get_request('getAudioFeatures',
+                                         url='audio-features',
+                                         params={'ids': ','.join(i.object_id for i in chunk)})
+
+            if resp:
+                if resp.get('audio_features', None):
+                    parsed_features = [self.parse_audio_features(i) for i in resp['audio_features']]
+                    audio_features += parsed_features
+                else:
+                    logger.error('no audio features included')
+            else:
+                logger.error('no response')
+
+        if len(audio_features) == len(uris):
+            return audio_features
+        else:
+            logger.error('mismatched length of input and response')
+
+    def populate_track_audio_features(self, tracks=Union[SpotifyTrack, List[SpotifyTrack]]):
+        logger.info(f'populating')
+
+        if isinstance(tracks, SpotifyTrack):
+            audio_features = self.get_track_audio_features([tracks.uri])
+
+            if audio_features:
+                if len(audio_features) == 1:
+                    tracks.audio_features = audio_features[0]
+                    return tracks
+                else:
+                    logger.error(f'{len(audio_features)} features returned')
+            else:
+                logger.error(f'no audio features returned for {tracks.uri}')
+
+        elif isinstance(tracks, List):
+            if all(isinstance(i, SpotifyTrack) for i in tracks):
+                audio_features = self.get_track_audio_features([i.uri for i in tracks])
+
+                if audio_features:
+                    for index, track in enumerate(tracks):
+                        track.audio_features = audio_features[index]
+
+                    return tracks
+                else:
+                    logger.error(f'no audio features returned')
+        else:
+            raise TypeError('must provide either single or list of spotify tracks')
+
     @staticmethod
     def parse_artist(artist_dict) -> SpotifyArtist:
 
@@ -683,7 +753,7 @@ class Network:
                                 label=label,
                                 popularity=popularity)
 
-    def parse_track(self, track_dict) -> Union[Track, SpotifyTrack, PlaylistTrack, PlayedTrack]:
+    def parse_track(self, track_dict) -> Union[Track, SpotifyTrack, PlaylistTrack, PlayedTrack, LibraryTrack]:
 
         if 'track' in track_dict:
             track = track_dict.get('track', None)
@@ -860,6 +930,30 @@ class Network:
                       name=device_dict['name'],
                       object_type=Device.DeviceType[device_dict['type'].upper()],
                       volume=device_dict['volume_percent'])
+
+    @staticmethod
+    def parse_audio_features(feature_dict) -> AudioFeatures:
+        return AudioFeatures(acousticness=feature_dict['acousticness'],
+                             analysis_url=feature_dict['analysis_url'],
+                             danceability=feature_dict['danceability'],
+                             duration_ms=feature_dict['duration_ms'],
+                             energy=feature_dict['energy'],
+                             uri=Uri(feature_dict['uri']),
+                             instrumentalness=feature_dict['instrumentalness'],
+                             key=feature_dict['key'],
+                             liveness=feature_dict['liveness'],
+                             loudness=feature_dict['loudness'],
+                             mode=feature_dict['mode'],
+                             speechiness=feature_dict['speechiness'],
+                             tempo=feature_dict['tempo'],
+                             time_signature=feature_dict['time_signature'],
+                             track_href=feature_dict['track_href'],
+                             valence=feature_dict['valence'])
+
+    @staticmethod
+    def chunk(l, n):
+        for i in range(0, len(l), n):
+            yield l[i:i + n]
 
 
 class PageCollection:

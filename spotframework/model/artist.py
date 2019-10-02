@@ -34,6 +34,9 @@ class SpotifyArtist(Artist):
         else:
             self.uri = uri
 
+        if self.uri.object_type != Uri.ObjectType.artist:
+            raise TypeError('provided uri not for an artist')
+
         self.genres = genres
 
         self.popularity = popularity
@@ -41,3 +44,7 @@ class SpotifyArtist(Artist):
     def __repr__(self):
         return Color.PURPLE + Color.BOLD + 'SpotifyArtist' + Color.END + \
                f': {self.name}, {self.uri}'
+
+    @staticmethod
+    def wrap(uri: Uri):
+        return SpotifyArtist(name=None, uri=uri)

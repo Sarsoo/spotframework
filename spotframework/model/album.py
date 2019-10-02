@@ -30,6 +30,11 @@ class Album:
         return Color.DARKCYAN + Color.BOLD + 'Album' + Color.END + \
                f': {self.name}, [{self.artists}]'
 
+    @staticmethod
+    def wrap(name: str = None,
+             artists: Union[str, List[str]] = None):
+        return Album(name=name, artists=[Artist(i) for i in artists])
+
 
 class SpotifyAlbum(Album):
     def __init__(self,
@@ -56,6 +61,9 @@ class SpotifyAlbum(Album):
         else:
             self.uri = uri
 
+        if self.uri.object_type != Uri.ObjectType.album:
+            raise TypeError('provided uri not for an album')
+
         self.genres = genres
         self.tracks = tracks
 
@@ -68,6 +76,16 @@ class SpotifyAlbum(Album):
     def __repr__(self):
         return Color.DARKCYAN + Color.BOLD + 'SpotifyAlbum' + Color.END + \
                f': {self.name}, {self.artists}, {self.uri}, {self.tracks}'
+
+    @staticmethod
+    def wrap(uri: Uri = None,
+             name: str = None,
+             artists: Union[str, List[str]] = None):
+
+        if uri:
+            return SpotifyAlbum(name=None, artists=None, uri=uri)
+        else:
+            return super().wrap(name=name, artists=artists)
 
 
 class LibraryAlbum(SpotifyAlbum):

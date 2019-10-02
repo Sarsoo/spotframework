@@ -142,6 +142,9 @@ class SpotifyPlaylist(Playlist):
         else:
             self.uri = uri
 
+        if self.uri.object_type != Uri.ObjectType.playlist:
+            raise TypeError('provided uri not for a playlist')
+
         self.collaborative = collaborative
         self.public = public
         self.ext_spotify = ext_spotify

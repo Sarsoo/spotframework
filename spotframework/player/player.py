@@ -13,14 +13,13 @@ class Player:
     def __init__(self,
                  net: Network):
         self.net = net
-        self.user = net.user
         self.last_status = None
 
     def __str__(self):
-        return f'{self.user.username} - {self.status}'
+        return f'{self.net.user.username} - {self.status}'
 
     def __repr__(self):
-        return f'Player: {self.user} - {self.status}'
+        return f'Player: {self.net.user} - {self.status}'
 
     @property
     def available_devices(self):
@@ -94,7 +93,7 @@ class Player:
             else:
                 self.shuffle(state=True)
 
-    def set_volume(self, value: int, device: Device = None):
+    def volume(self, value: int, device: Device = None):
 
         if 0 <= int(value) <= 100:
             if device:
