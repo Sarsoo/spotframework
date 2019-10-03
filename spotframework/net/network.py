@@ -25,8 +25,9 @@ class Network:
 
     def __init__(self, user: NetworkUser):
         self.user = user
+        self.refresh_counter = 0
 
-    def make_get_request(self, method, url=None, params=None, headers=None, whole_url=None) -> Optional[dict]:
+    def get_request(self, method, url=None, params=None, headers=None, whole_url=None) -> Optional[dict]:
 
         if headers is None:
             headers = dict()
@@ -50,25 +51,39 @@ class Network:
             if req.status_code == 429:
                 retry_after = req.headers.get('Retry-After', None)
 
-                if retry_after:
-                    logger.warning(f'{method} rate limit reached: retrying in {retry_after} seconds')
-                    time.sleep(int(retry_after) + 1)
-                    return self.make_get_request(method, url, params, headers)
+                if self.refresh_counter < 5:
+                    self.refresh_counter += 1
+                    if retry_after:
+                        logger.warning(f'{method} rate limit reached: retrying in {retry_after} seconds')
+                        time.sleep(int(retry_after) + 1)
+                        return self.get_request(method, url, params, headers)
+                    else:
+                        logger.error(f'{method} rate limit reached: cannot find Retry-After header')
                 else:
-                    logger.error(f'{method} rate limit reached: cannot find Retry-After header')
+                    self.refresh_counter = 0
+                    logger.critical(f'refresh token limit (5) reached')
 
             elif req.status_code == 401:
                 logger.warning(f'{method} access token expired, refreshing')
                 self.user.refresh_token()
-                return self.make_get_request(method, url, params, headers)
+                if self.refresh_counter < 5:
+                    self.refresh_counter += 1
+                    return self.get_request(method, url, params, headers)
+                else:
+                    self.refresh_counter = 0
+                    logger.critical(f'refresh token limit (5) reached')
 
             else:
-                error_text = req.json()['error']['message']
-                logger.error(f'{method} get {req.status_code} {error_text}')
+                error = req.json().get('error', None)
+                if error:
+                    message = error.get('message', 'n/a')
+                    logger.error(f'{method} {req.status_code} {message}')
+                else:
+                    logger.error(f'{method} {req.status_code} no error object found')
 
         return None
 
-    def make_post_request(self, method, url, params=None, json=None, headers=None) -> Optional[Response]:
+    def post_request(self, method, url, params=None, json=None, headers=None) -> Optional[Response]:
 
         if headers is None:
             headers = dict()
@@ -85,25 +100,39 @@ class Network:
             if req.status_code == 429:
                 retry_after = req.headers.get('Retry-After', None)
 
-                if retry_after:
-                    logger.warning(f'{method} rate limit reached: retrying in {retry_after} seconds')
-                    time.sleep(int(retry_after) + 1)
-                    return self.make_post_request(method, url, params, json, headers)
+                if self.refresh_counter < 5:
+                    self.refresh_counter += 1
+                    if retry_after:
+                        logger.warning(f'{method} rate limit reached: retrying in {retry_after} seconds')
+                        time.sleep(int(retry_after) + 1)
+                        return self.post_request(method, url, params, json, headers)
+                    else:
+                        logger.error(f'{method} rate limit reached: cannot find Retry-After header')
                 else:
-                    logger.error(f'{method} rate limit reached: cannot find Retry-After header')
+                    self.refresh_counter = 0
+                    logger.critical(f'refresh token limit (5) reached')
 
             elif req.status_code == 401:
                 logger.warning(f'{method} access token expired, refreshing')
                 self.user.refresh_token()
-                return self.make_post_request(method, url, params, json, headers)
+                if self.refresh_counter < 5:
+                    self.refresh_counter += 1
+                    return self.post_request(method, url, params, json, headers)
+                else:
+                    self.refresh_counter = 0
+                    logger.critical(f'refresh token limit (5) reached')
 
             else:
-                error_text = str(req.text)
-                logger.error(f'{method} post {req.status_code} {error_text}')
+                error = req.json().get('error', None)
+                if error:
+                    message = error.get('message', 'n/a')
+                    logger.error(f'{method} {req.status_code} {message}')
+                else:
+                    logger.error(f'{method} {req.status_code} no error object found')
 
         return None
 
-    def make_put_request(self, method, url, params=None, json=None, headers=None) -> Optional[Response]:
+    def put_request(self, method, url, params=None, json=None, headers=None) -> Optional[Response]:
 
         if headers is None:
             headers = dict()
@@ -120,21 +149,35 @@ class Network:
             if req.status_code == 429:
                 retry_after = req.headers.get('Retry-After', None)
 
-                if retry_after:
-                    logger.warning(f'{method} rate limit reached: retrying in {retry_after} seconds')
-                    time.sleep(int(retry_after) + 1)
-                    return self.make_put_request(method, url, params, json, headers)
+                if self.refresh_counter < 5:
+                    self.refresh_counter += 1
+                    if retry_after:
+                        logger.warning(f'{method} rate limit reached: retrying in {retry_after} seconds')
+                        time.sleep(int(retry_after) + 1)
+                        return self.put_request(method, url, params, json, headers)
+                    else:
+                        logger.error(f'{method} rate limit reached: cannot find Retry-After header')
                 else:
-                    logger.error(f'{method} rate limit reached: cannot find Retry-After header')
+                    self.refresh_counter = 0
+                    logger.critical(f'refresh token limit (5) reached')
 
             elif req.status_code == 401:
                 logger.warning(f'{method} access token expired, refreshing')
                 self.user.refresh_token()
-                return self.make_put_request(method, url, params, json, headers)
+                if self.refresh_counter < 5:
+                    self.refresh_counter += 1
+                    return self.put_request(method, url, params, json, headers)
+                else:
+                    self.refresh_counter = 0
+                    logger.critical(f'refresh token limit (5) reached')
 
             else:
-                error_text = str(req.text)
-                logger.error(f'{method} put {req.status_code} {error_text}')
+                error = req.json().get('error', None)
+                if error:
+                    message = error.get('message', 'n/a')
+                    logger.error(f'{method} {req.status_code} {message}')
+                else:
+                    logger.error(f'{method} {req.status_code} no error object found')
 
         return None
 
@@ -168,7 +211,7 @@ class Network:
         if description:
             json['description'] = description
 
-        req = self.make_post_request('createPlaylist', f'users/{username}/playlists', json=json)
+        req = self.post_request('createPlaylist', f'users/{username}/playlists', json=json)
 
         if 200 <= req.status_code < 300:
             return self.parse_playlist(req.json())
@@ -250,7 +293,7 @@ class Network:
 
         logger.info("retrieving")
 
-        resp = self.make_get_request('getAvailableDevices', 'me/player/devices')
+        resp = self.get_request('getAvailableDevices', 'me/player/devices')
         if resp:
             return [self.parse_device(i) for i in resp['devices']]
         else:
@@ -273,7 +316,7 @@ class Network:
         if before:
             params['before'] = int(before.timestamp() * 1000)
 
-        resp = self.make_get_request('getRecentlyPlayedTracks', 'me/player/recently-played', params=params)
+        resp = self.get_request('getRecentlyPlayedTracks', 'me/player/recently-played', params=params)
 
         if resp:
             pager = PageCollection(self, page=resp)
@@ -293,7 +336,7 @@ class Network:
 
         logger.info("retrieved")
 
-        resp = self.make_get_request('getPlayer', 'me/player')
+        resp = self.get_request('getPlayer', 'me/player')
         if resp:
             return self.parse_currently_playing(resp)
         else:
@@ -325,7 +368,7 @@ class Network:
             'play': True
         }
 
-        resp = self.make_put_request('changePlaybackDevice', 'me/player', json=json)
+        resp = self.put_request('changePlaybackDevice', 'me/player', json=json)
         if resp:
             return True
         else:
@@ -351,7 +394,7 @@ class Network:
         if uris:
             payload['uris'] = [str(i) for i in uris[:200]]
 
-        req = self.make_put_request('play', 'me/player/play', params=params, json=payload)
+        req = self.put_request('play', 'me/player/play', params=params, json=payload)
         if req:
             return req
         else:
@@ -367,7 +410,7 @@ class Network:
         else:
             params = None
 
-        req = self.make_put_request('pause', 'me/player/pause', params=params)
+        req = self.put_request('pause', 'me/player/pause', params=params)
         if req:
             return req
         else:
@@ -383,7 +426,7 @@ class Network:
         else:
             params = None
 
-        req = self.make_post_request('next', 'me/player/next', params=params)
+        req = self.post_request('next', 'me/player/next', params=params)
         if req:
             return req
         else:
@@ -399,7 +442,7 @@ class Network:
         else:
             params = None
 
-        req = self.make_post_request('previous', 'me/player/previous', params=params)
+        req = self.post_request('previous', 'me/player/previous', params=params)
         if req:
             return req
         else:
@@ -414,7 +457,7 @@ class Network:
         if deviceid is not None:
             params['device_id'] = deviceid
 
-        req = self.make_put_request('setShuffle', 'me/player/shuffle', params=params)
+        req = self.put_request('setShuffle', 'me/player/shuffle', params=params)
         if req:
             return req
         else:
@@ -431,7 +474,7 @@ class Network:
             if deviceid is not None:
                 params['device_id'] = deviceid
 
-            req = self.make_put_request('setVolume', 'me/player/volume', params=params)
+            req = self.put_request('setVolume', 'me/player/volume', params=params)
             if req:
                 return req
             else:
@@ -450,8 +493,8 @@ class Network:
 
         json = {"uris": [str(i) for i in uris[:100]]}
 
-        req = self.make_put_request('replacePlaylistTracks', f'playlists/{uri.object_id}/tracks',
-                                    json=json, headers=headers)
+        req = self.put_request('replacePlaylistTracks', f'playlists/{uri.object_id}/tracks',
+                               json=json, headers=headers)
 
         if req is not None:
 
@@ -491,8 +534,8 @@ class Network:
             logger.warning('update dictionairy length 0')
             return None
         else:
-            req = self.make_put_request('changePlaylistDetails', f'playlists/{uri.object_id}',
-                                        json=json, headers=headers)
+            req = self.put_request('changePlaylistDetails', f'playlists/{uri.object_id}',
+                                   json=json, headers=headers)
             if req:
                 return req
             else:
@@ -507,8 +550,8 @@ class Network:
 
         json = {"uris": [str(i) for i in uris[:100]]}
 
-        req = self.make_post_request('addPlaylistTracks', f'playlists/{uri.object_id}/tracks',
-                                     json=json, headers=headers)
+        req = self.post_request('addPlaylistTracks', f'playlists/{uri.object_id}/tracks',
+                                json=json, headers=headers)
 
         if req is not None:
             resp = req.json()
@@ -542,7 +585,7 @@ class Network:
             logger.warning('update dictionairy length 0')
             return None
         else:
-            resp = self.make_get_request('getRecommendations', 'recommendations', params=params)
+            resp = self.get_request('getRecommendations', 'recommendations', params=params)
             if resp:
                 if 'tracks' in resp:
                     return [self.parse_track(i) for i in resp['tracks']]
@@ -600,7 +643,7 @@ class Network:
                 'range_length': range_length,
                 'insert_before': insert_before}
 
-        resp = self.make_put_request('reorderPlaylistTracks', f'playlists/{uri.object_id}/tracks', json=json)
+        resp = self.put_request('reorderPlaylistTracks', f'playlists/{uri.object_id}/tracks', json=json)
 
         if resp:
             return resp
@@ -613,9 +656,9 @@ class Network:
         audio_features = []
         chunked_uris = list(self.chunk(uris, 100))
         for chunk in chunked_uris:
-            resp = self.make_get_request('getAudioFeatures',
-                                         url='audio-features',
-                                         params={'ids': ','.join(i.object_id for i in chunk)})
+            resp = self.get_request('getAudioFeatures',
+                                    url='audio-features',
+                                    params={'ids': ','.join(i.object_id for i in chunk)})
 
             if resp:
                 if resp.get('audio_features', None):
@@ -1006,10 +1049,10 @@ class PageCollection:
 
         params = {'limit': self.page_limit}
         if url:
-            resp = self.net.make_get_request(method=self.name, whole_url=url, params=params)
+            resp = self.net.get_request(method=self.name, whole_url=url, params=params)
         else:
             if self.url:
-                resp = self.net.make_get_request(method=self.name, url=self.url, params=params)
+                resp = self.net.get_request(method=self.name, url=self.url, params=params)
             else:
                 raise ValueError('no url to query')
 

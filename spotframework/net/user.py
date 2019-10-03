@@ -26,6 +26,8 @@ class NetworkUser(User):
 
         self.on_refresh = []
 
+        self.refresh_counter = 0
+
     def __repr__(self):
         return Color.RED + Color.BOLD + 'NetworkUser' + Color.END + \
                f': {self.username}, {self.display_name}, {self.uri}'
@@ -65,15 +67,16 @@ class NetworkUser(User):
                 retry_after = req.headers.get('Retry-After', None)
 
                 if retry_after:
-                    logger.warning(f'refresh_token rate limit reached: retrying in {retry_after} seconds')
+                    logger.warning(f'rate limit reached: retrying in {retry_after} seconds')
                     time.sleep(int(retry_after) + 1)
                     return self.refresh_token()
                 else:
-                    logger.error('refresh_token rate limit reached: cannot find Retry-After header')
+                    logger.error('rate limit reached: cannot find Retry-After header')
 
             else:
-                error_text = req.json()['error']['message']
-                logger.error(f'refresh_token get {req.status_code} {error_text}')
+                error_text = req.json().get('error', 'n/a')
+                error_description = req.json().get('error_description', 'n/a')
+                logger.error(f'get {req.status_code} {error_text} - {error_description}')
 
     def refresh_info(self) -> None:
         info = self.get_info()
@@ -109,17 +112,26 @@ class NetworkUser(User):
                 retry_after = req.headers.get('Retry-After', None)
 
                 if retry_after:
-                    logger.warning(f'get_info rate limit reached: retrying in {retry_after} seconds')
+                    logger.warning(f'rate limit reached: retrying in {retry_after} seconds')
                     time.sleep(int(retry_after) + 1)
                     return self.get_info()
                 else:
-                    logger.error('get_info rate limit reached: cannot find Retry-After header')
+                    logger.error('rate limit reached: cannot find Retry-After header')
 
             elif req.status_code == 401:
                 logger.warning('access token expired, refreshing')
                 self.refresh_token()
-                return self.get_info()
+                if self.refresh_counter < 5:
+                    self.refresh_counter += 1
+                    return self.get_info()
+                else:
+                    self.refresh_counter = 0
+                    logger.critical('refresh token limit (5) reached')
 
             else:
-                error_text = req.json()['error']['message']
-                logger.error(f'get_info get {req.status_code} {error_text}')
+                error = req.json().get('error', None)
+                if error:
+                    message = error.get('message', 'n/a')
+                    logger.error(f'{req.status_code} {message}')
+                else:
+                    logger.error(f'{req.status_code} no error object found')
