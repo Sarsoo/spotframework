@@ -6,12 +6,17 @@ from spotframework.util.console import Color
 from spotframework.model.uri import Uri
 if TYPE_CHECKING:
     from spotframework.model.artist import Artist
+    from spotframework.model.track import Track
 
 
 class Album:
-    def __init__(self, name: str, artists: List[Artist]):
+    def __init__(self, name: str, artists: List[Artist], tracks: List[Track] = None):
         self.name = name
         self.artists = artists
+        if tracks is not None:
+            self.tracks = tracks
+        else:
+            self.tracks = []
 
     @property
     def artists_names(self) -> str:
@@ -30,6 +35,9 @@ class Album:
         return Color.DARKCYAN + Color.BOLD + 'Album' + Color.END + \
                f': {self.name}, [{self.artists}]'
 
+    def __len__(self):
+        return len(self.tracks)
+
     @staticmethod
     def wrap(name: str = None,
              artists: Union[str, List[str]] = None):
@@ -45,7 +53,7 @@ class SpotifyAlbum(Album):
                  uri: Union[str, Uri] = None,
 
                  genres: List[str] = None,
-                 tracks: List = None,
+                 tracks: List[Track] = None,
 
                  release_date: str = None,
                  release_date_precision: str = None,
@@ -53,7 +61,7 @@ class SpotifyAlbum(Album):
                  label: str = None,
                  popularity: int = None
                  ):
-        super().__init__(name, artists)
+        super().__init__(name, artists, tracks=tracks)
 
         self.href = href
         if isinstance(uri, str):
@@ -65,7 +73,6 @@ class SpotifyAlbum(Album):
             raise TypeError('provided uri not for an album')
 
         self.genres = genres
-        self.tracks = tracks
 
         self.release_date = release_date
         self.release_date_precision = release_date_precision

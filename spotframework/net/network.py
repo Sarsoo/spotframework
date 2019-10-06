@@ -703,6 +703,72 @@ class Network:
         else:
             raise TypeError('must provide either single or list of spotify tracks')
 
+    def get_tracks(self, uris: List[Uri]) -> List[SpotifyTrack]:
+        logger.info(f'getting {len(uris)} tracks')
+
+        if not all(i.object_type == Uri.ObjectType.track for i in uris):
+            raise TypeError('uris must be of type track')
+
+        tracks = []
+        chunked_uris = list(self.chunk(uris, 50))
+        for chunk in chunked_uris:
+            resp = self.get_request(method='getTracks', url='tracks', params={'ids': ','.join([i.object_id for i in chunk])})
+            if resp:
+                tracks += [self.parse_track(i) for i in resp.get('tracks', [])]
+
+        return tracks
+
+    def get_track(self, uri: Uri) -> Optional[SpotifyTrack]:
+        track = self.get_tracks([uri])
+        if len(track) == 1:
+            return track[0]
+        else:
+            return None
+
+    def get_albums(self, uris: List[Uri]) -> List[SpotifyAlbum]:
+        logger.info(f'getting {len(uris)} albums')
+
+        if not all(i.object_type == Uri.ObjectType.album for i in uris):
+            raise TypeError('uris must be of type album')
+
+        albums = []
+        chunked_uris = list(self.chunk(uris, 50))
+        for chunk in chunked_uris:
+            resp = self.get_request(method='getAlbums', url='albums', params={'ids': ','.join([i.object_id for i in chunk])})
+            if resp:
+                albums += [self.parse_album(i) for i in resp.get('albums', [])]
+
+        return albums
+
+    def get_album(self, uri: Uri) -> Optional[SpotifyAlbum]:
+        album = self.get_albums([uri])
+        if len(album) == 1:
+            return album[0]
+        else:
+            return None
+
+    def get_artists(self, uris: List[Uri]) -> List[SpotifyArtist]:
+        logger.info(f'getting {len(uris)} artists')
+
+        if not all(i.object_type == Uri.ObjectType.artist for i in uris):
+            raise TypeError('uris must be of type artist')
+
+        artists = []
+        chunked_uris = list(self.chunk(uris, 50))
+        for chunk in chunked_uris:
+            resp = self.get_request(method='getArtists', url='artists', params={'ids': ','.join([i.object_id for i in chunk])})
+            if resp:
+                artists += [self.parse_artist(i) for i in resp.get('artists', [])]
+
+        return artists
+
+    def get_artist(self, uri: Uri) -> Optional[SpotifyArtist]:
+        artist = self.get_artists([uri])
+        if len(artist) == 1:
+            return artist[0]
+        else:
+            return None
+
     @staticmethod
     def parse_artist(artist_dict) -> SpotifyArtist:
 
@@ -725,7 +791,6 @@ class Network:
                              popularity=popularity)
 
     def parse_album(self, album_dict) -> Union[SpotifyAlbum, LibraryAlbum]:
-
         if 'album' in album_dict:
             album = album_dict.get('album', None)
         else:
@@ -1037,7 +1102,14 @@ class PageCollection:
         return items[:self.total_limit]
 
     def continue_iteration(self):
-        if len(self) < self.total_limit:
+        if self.total_limit:
+            if len(self) < self.total_limit:
+                if len(self.pages) > 0:
+                    if self.pages[-1].next_link:
+                        self.iterate(self.pages[-1].next_link)
+                else:
+                    raise IndexError('no pages')
+        else:
             if len(self.pages) > 0:
                 if self.pages[-1].next_link:
                     self.iterate(self.pages[-1].next_link)
