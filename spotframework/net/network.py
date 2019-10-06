@@ -21,6 +21,22 @@ limit = 50
 logger = logging.getLogger(__name__)
 
 
+class SearchResponse:
+    def __init__(self,
+                 tracks: List[SpotifyTrack],
+                 albums: List[SpotifyAlbum],
+                 artists: List[SpotifyArtist],
+                 playlists: List[SpotifyPlaylist]):
+        self.tracks = tracks
+        self.albums = albums
+        self.artists = artists
+        self.playlists = playlists
+
+    @property
+    def all(self):
+        return self.tracks + self.albums + self.artists + self.playlists
+
+
 class Network:
 
     def __init__(self, user: NetworkUser):
@@ -768,6 +784,43 @@ class Network:
             return artist[0]
         else:
             return None
+
+    def search(self,
+               query_types: List[Uri.ObjectType],
+               query: str = None,
+               track: str = None,
+               album: str = None,
+               artist: str = None,
+               response_limit: int = 20) -> SearchResponse:
+
+        if query is None and track is None and album is None and artist is None:
+            raise ValueError('no query parameters')
+
+        queries = []
+
+        if query is not None:
+            queries.append(query)
+        if track is not None:
+            queries.append(f'track:{track}')
+        if album is not None:
+            queries.append(f'album:{album}')
+        if artist is not None:
+            queries.append(f'artist:{artist}')
+
+        params = {
+            'q': ' '.join(queries),
+            'type': ','.join([i.name for i in query_types]),
+            'limit': response_limit
+        }
+
+        resp = self.get_request(method='search', url='search', params=params)
+
+        albums = [self.parse_album(i) for i in resp.get('albums', {}).get('items', [])]
+        artists = [self.parse_artist(i) for i in resp.get('artists', {}).get('items', [])]
+        tracks = [self.parse_track(i) for i in resp.get('tracks', {}).get('items', [])]
+        playlists = [self.parse_playlist(i) for i in resp.get('playlists', {}).get('items', [])]
+
+        return SearchResponse(tracks=tracks, albums=albums, artists=artists, playlists=playlists)
 
     @staticmethod
     def parse_artist(artist_dict) -> SpotifyArtist:
