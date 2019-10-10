@@ -284,7 +284,10 @@ class Network:
 
         playlists = self.get_playlists()
 
-        if playlists:
+        if self.user.username is None:
+            self.user.refresh_info()
+
+        if playlists is not None:
             return list(filter(lambda x: x.owner.username == self.user.username, playlists))
         else:
             logger.error('no playlists returned to filter')

@@ -27,28 +27,28 @@ if __name__ == '__main__':
 
     logger.addHandler(stream_handler)
 
-    try:
+    # try:
 
-        network = Network(NetworkUser(os.environ['SPOTCLIENT'],
-                                      os.environ['SPOTSECRET'],
-                                      os.environ['SPOTREFRESH']))
-        network.user.refresh_access_token()
-        playlists = network.get_user_playlists()
+    network = Network(NetworkUser(os.environ['SPOTCLIENT'],
+                                  os.environ['SPOTSECRET'],
+                                  os.environ['SPOTREFRESH']))
+    network.user.refresh_access_token()
+    playlists = network.get_user_playlists()
 
-        for playlist in playlists:
-            playlist.tracks = network.get_playlist_tracks(playlist.uri)
+    for playlist in playlists:
+        playlist.tracks = network.get_playlist_tracks(playlist.uri)
 
-        path = sys.argv[1]
+    path = sys.argv[1]
 
-        datepath = str(datetime.datetime.now()).split(' ')[0].replace('-', '/')
+    datepath = str(datetime.datetime.now()).split(' ')[0].replace('-', '/')
 
-        totalpath = os.path.join(path, datepath)
-        pathdir = os.path.dirname(totalpath)
-        if not os.path.exists(totalpath):
-            os.makedirs(totalpath)
+    totalpath = os.path.join(path, datepath)
+    pathdir = os.path.dirname(totalpath)
+    if not os.path.exists(totalpath):
+        os.makedirs(totalpath)
 
-        for play in playlists:
-            csvwrite.export_playlist(play, totalpath)
+    for play in playlists:
+        csvwrite.export_playlist(play, totalpath)
 
-    except Exception as e:
-        logger.exception(f'exception occured')
+    # except Exception as e:
+    #     logger.exception(f'exception occured')
