@@ -34,8 +34,9 @@ class SpotifyArtist(Artist):
         else:
             self.uri = uri
 
-        if self.uri.object_type != Uri.ObjectType.artist:
-            raise TypeError('provided uri not for an artist')
+        if self.uri:
+            if self.uri.object_type != Uri.ObjectType.artist:
+                raise TypeError('provided uri not for an artist')
 
         self.genres = genres
 

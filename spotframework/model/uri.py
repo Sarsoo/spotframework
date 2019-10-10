@@ -14,6 +14,7 @@ class Uri:
         self.object_type = None
         self.object_id = None
         self.username = None
+        self.is_local = False
 
         parts = input_string.split(':')
 
@@ -28,6 +29,12 @@ class Uri:
                 raise ValueError('malformed uri')
             self.object_type = self.ObjectType[parts[3]]
             self.object_id = parts[4]
+        elif len(parts) == 6:
+            if parts[1] == 'local':
+                self.object_type = self.ObjectType.track
+                self.is_local = True
+            else:
+                raise ValueError(f'malformed uri: {len(parts)} parts')
         else:
             raise ValueError(f'malformed uri: {len(parts)} parts')
 

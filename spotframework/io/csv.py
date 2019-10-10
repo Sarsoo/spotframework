@@ -22,17 +22,13 @@ def export_playlist(playlist, path, name=None):
         writer.writeheader()
 
         for track in playlist.tracks:
-
-            trackdict = {
-                'name':track.name,
-                'album':track.album.name,
-                'added':track.added_at,
-                'track id':track.spotify_id,
-                'album id':track.album.spotify_id,
-                'added by':track.added_by.username}
-
-            trackdict['album artist'] = ', '.join(x.name for x in track.album.artists)
-
-            trackdict['artist'] = ', '.join(x.name for x in track.artists)
-
-            writer.writerow(trackdict)
+            writer.writerow({
+                'name': track.name,
+                'album': track.album.name,
+                'added': track.added_at,
+                'track id': track.uri.object_id if track.uri is not None else 'none',
+                'album id': track.album.uri.object_id if track.album.uri is not None else 'none',
+                'added by': track.added_by.username,
+                'album artist': ', '.join(x.name for x in track.album.artists),
+                'artist': ', '.join(x.name for x in track.artists)
+            })
