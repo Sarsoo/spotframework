@@ -127,6 +127,10 @@ class PlaylistEngine:
         if name:
             playlist = next((i for i in playlist_source.playlists if i.name == name), None)
         else:
+
+            if uri.object_type is not Uri.ObjectType.playlist:
+                raise TypeError('uri not a playlist')
+
             playlist = next((i for i in playlist_source.playlists if i.uri == uri), None)
 
         if playlist is None:
