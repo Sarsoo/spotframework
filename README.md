@@ -1,4 +1,4 @@
-pyfmframework
+spotframework
 ===============
 
 *scripting framework for interacting with the spotify web api*
