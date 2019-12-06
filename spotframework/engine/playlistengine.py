@@ -161,7 +161,7 @@ class PlaylistEngine:
                          tracks: List[SpotifyTrack],
                          uri: Uri) -> Optional[Response]:
 
-        resp = self.net.replace_playlist_tracks(uri, [i.uri for i in tracks])
+        resp = self.net.replace_playlist_tracks(uri=uri, uris=[i.uri for i in tracks])
         if resp:
             return resp
         else:

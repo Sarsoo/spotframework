@@ -197,21 +197,38 @@ class Network:
 
         return None
 
-    def get_playlist(self, uri: Uri) -> Optional[SpotifyPlaylist]:
+    def get_playlist(self,
+                     uri: Uri = None,
+                     uri_string: str = None,
+                     tracks: bool = True) -> Optional[SpotifyPlaylist]:
         """get playlist object with tracks for uri"""
 
-        logger.info(f"{uri}")
+        if uri is None and uri_string is None:
+            raise NameError('no uri provided')
 
-        tracks = self.get_playlist_tracks(uri)
+        if uri_string is not None:
+            uri = Uri(uri_string)
 
-        if tracks is not None:
+        logger.info(f"retrieving {uri}")
 
-            playlist = SpotifyPlaylist(uri)
-            playlist += tracks
+        resp = self.get_request('getPlaylist', f'playlists/{uri.object_id}')
+
+        if resp:
+            playlist = self.parse_playlist(resp)
+
+            if tracks and resp.get('tracks'):
+                if 'next' in resp['tracks']:
+
+                    track_pager = PageCollection(net=self, page=resp['tracks'])
+                    track_pager.continue_iteration()
+
+                    playlist.tracks = [self.parse_track(i) for i in track_pager.items]
+                else:
+                    playlist.tracks = [self.parse_track(i) for i in resp.get('tracks', [])]
 
             return playlist
         else:
-            logger.error(f"{uri} - no tracks returned")
+            logger.error('no playlist returned')
             return None
 
     def create_playlist(self,
@@ -293,8 +310,17 @@ class Network:
             logger.error('no playlists returned to filter')
             return None
 
-    def get_playlist_tracks(self, uri: Uri, response_limit: int = None) -> List[PlaylistTrack]:
+    def get_playlist_tracks(self,
+                            uri: Uri = None,
+                            uri_string: str = None,
+                            response_limit: int = None) -> List[PlaylistTrack]:
         """get list of playlists tracks for uri"""
+
+        if uri is None and uri_string is None:
+            raise NameError('no uri provided')
+
+        if uri_string is not None:
+            uri = Uri(uri_string)
 
         logger.info(f"loading")
 
@@ -393,8 +419,19 @@ class Network:
         else:
             return None
 
-    def play(self, uri: Uri = None, uris: List[Uri] = None, deviceid: str = None) -> Optional[Response]:
+    def play(self,
+             uri: Uri = None,
+             uri_string: str = None,
+             uris: List[Uri] = None,
+             uri_strings: List[str] = None,
+             deviceid: str = None) -> Optional[Response]:
         """begin playback"""
+
+        if uri_string is not None:
+            uri = Uri(uri_string)
+
+        if uri_strings is not None:
+            uris = [Uri(i) for i in uri_strings]
 
         logger.info(f"{uri}{' ' + deviceid if deviceid is not None else ''}")
 
@@ -504,7 +541,17 @@ class Network:
             logger.error(f"{volume} not accepted value")
             return None
 
-    def replace_playlist_tracks(self, uri: Uri, uris: List[Uri]):
+    def replace_playlist_tracks(self,
+                                uri: Uri = None,
+                                uri_string: str = None,
+                                uris: List[Uri] = None,
+                                uri_strings: List[str] = None):
+
+        if uri_string is not None:
+            uri = Uri(uri_string)
+
+        if uri_strings is not None:
+            uris = [Uri(i) for i in uri_strings]
 
         logger.info(f"{uri}")
 
@@ -587,7 +634,10 @@ class Network:
             logger.error(f'error retrieving tracks {uri}, total: {len(uris)}')
             return []
 
-    def get_recommendations(self, tracks=None, artists=None, response_limit=10) -> Optional[List[Track]]:
+    def get_recommendations(self,
+                            tracks: List[Track] = None,
+                            artists: List[SpotifyArtist] = None,
+                            response_limit=10) -> Optional[List[Track]]:
 
         logger.info(f'sample size: {response_limit}')
 
@@ -621,14 +671,14 @@ class Network:
 
         if playlist.uri:
             if playlist.tracks == -1:
-                self.replace_playlist_tracks(playlist.uri, [])
+                self.replace_playlist_tracks(uri=playlist.uri, uris=[])
             elif playlist.tracks:
                 if append_tracks:
                     self.add_playlist_tracks(playlist.uri, [i.uri for i in playlist.tracks if
                                                             isinstance(i, SpotifyTrack)])
                 else:
-                    self.replace_playlist_tracks(playlist.uri, [i.uri for i in playlist.tracks if
-                                                                isinstance(i, SpotifyTrack)])
+                    self.replace_playlist_tracks(uri=playlist.uri, uris=[i.uri for i in playlist.tracks if
+                                                                         isinstance(i, SpotifyTrack)])
 
             if playlist.name or playlist.collaborative or playlist.public or playlist.description:
                 self.change_playlist_details(playlist.uri,
@@ -722,7 +772,16 @@ class Network:
         else:
             raise TypeError('must provide either single or list of spotify tracks')
 
-    def get_tracks(self, uris: List[Uri]) -> List[SpotifyTrack]:
+    def get_tracks(self,
+                   uris: List[Uri] = None,
+                   uri_strings: List[str] = None) -> List[SpotifyTrack]:
+
+        if uris is None and uri_strings is None:
+            raise NameError('no uris provided')
+
+        if uri_strings is not None:
+            uris = [Uri(i) for i in uri_strings]
+
         logger.info(f'getting {len(uris)} tracks')
 
         if not all(i.object_type == Uri.ObjectType.track for i in uris):
@@ -737,14 +796,28 @@ class Network:
 
         return tracks
 
-    def get_track(self, uri: Uri) -> Optional[SpotifyTrack]:
+    def get_track(self, uri: Uri = None, uri_string: str = None) -> Optional[SpotifyTrack]:
+
+        if uri is None and uri_string is None:
+            raise NameError('no uri provided')
+
+        if uri_string is not None:
+            uri = Uri(uri_string)
+
         track = self.get_tracks([uri])
         if len(track) == 1:
             return track[0]
         else:
             return None
 
-    def get_albums(self, uris: List[Uri]) -> List[SpotifyAlbum]:
+    def get_albums(self, uris: List[Uri] = None, uri_strings: List[str] = None) -> List[SpotifyAlbum]:
+
+        if uris is None and uri_strings is None:
+            raise NameError('no uris provided')
+
+        if uri_strings is not None:
+            uris = [Uri(i) for i in uri_strings]
+
         logger.info(f'getting {len(uris)} albums')
 
         if not all(i.object_type == Uri.ObjectType.album for i in uris):
@@ -759,14 +832,28 @@ class Network:
 
         return albums
 
-    def get_album(self, uri: Uri) -> Optional[SpotifyAlbum]:
+    def get_album(self, uri: Uri = None, uri_string: str = None) -> Optional[SpotifyAlbum]:
+
+        if uri is None and uri_string is None:
+            raise NameError('no uri provided')
+
+        if uri_string is not None:
+            uri = Uri(uri_string)
+
         album = self.get_albums([uri])
         if len(album) == 1:
             return album[0]
         else:
             return None
 
-    def get_artists(self, uris: List[Uri]) -> List[SpotifyArtist]:
+    def get_artists(self, uris: List[Uri] = None, uri_strings: List[str] = None) -> List[SpotifyArtist]:
+
+        if uris is None and uri_strings is None:
+            raise NameError('no uris provided')
+
+        if uri_strings is not None:
+            uris = [Uri(i) for i in uri_strings]
+
         logger.info(f'getting {len(uris)} artists')
 
         if not all(i.object_type == Uri.ObjectType.artist for i in uris):
@@ -781,7 +868,14 @@ class Network:
 
         return artists
 
-    def get_artist(self, uri: Uri) -> Optional[SpotifyArtist]:
+    def get_artist(self, uri: Uri = None, uri_string: str = None) -> Optional[SpotifyArtist]:
+
+        if uri is None and uri_string is None:
+            raise NameError('no uri provided')
+
+        if uri_string is not None:
+            uri = Uri(uri_string)
+
         artist = self.get_artists([uri])
         if len(artist) == 1:
             return artist[0]
