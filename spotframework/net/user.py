@@ -1,3 +1,4 @@
+from __future__ import annotations
 import requests
 from spotframework.model.user import User
 from spotframework.util.console import Color
@@ -32,7 +33,7 @@ class NetworkUser(User):
         return Color.RED + Color.BOLD + 'NetworkUser' + Color.END + \
                f': {self.username}, {self.display_name}, {self.uri}'
 
-    def refresh_access_token(self) -> None:
+    def refresh_access_token(self) -> NetworkUser:
 
         if self.refresh_token is None:
             raise NameError('no refresh token to query')
@@ -77,6 +78,8 @@ class NetworkUser(User):
                 error_text = req.json().get('error', 'n/a')
                 error_description = req.json().get('error_description', 'n/a')
                 logger.error(f'get {req.status_code} {error_text} - {error_description}')
+
+        return self
 
     def refresh_info(self) -> None:
         info = self.get_info()
