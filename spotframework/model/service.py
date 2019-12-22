@@ -94,5 +94,20 @@ class CurrentlyPlaying:
             f'context({self.context}) track({self.track}) device({self.device}) shuffle({self.shuffle}) ' \
             f'repeat({self.repeat}) time({self.timestamp})'
 
+    def __eq__(self, other):
+        return isinstance(other, CurrentlyPlaying) and other.track == self.track
+
+    @staticmethod
+    def _format_duration(duration):
+        total_seconds = duration / 1000
+        minutes = int((total_seconds/60) % 60)
+        seconds = int(total_seconds % 60)
+        return f'{minutes}:{seconds}'
+
     def __str__(self):
-        return f'playing: {self.is_playing} - {self.track} on {self.device}'
+        if self.is_playing:
+            playing = 'playing'
+        else:
+            playing = '(paused)'
+
+        return f'{playing} {self.track} on {self.device} ({self._format_duration(self.progress_ms)})'

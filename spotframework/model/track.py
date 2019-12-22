@@ -53,6 +53,9 @@ class Track:
         return Color.YELLOW + Color.BOLD + 'Track' + Color.END + \
                f': {self.name}, ({self.album}), {self.artists}'
 
+    def __eq__(self, other):
+        return isinstance(other, Track) and other.name == self.name and other.artists == self.artists
+
     @staticmethod
     def wrap(name: str = None,
              artists: List[str] = None,
@@ -109,6 +112,9 @@ class SpotifyTrack(Track):
             string += ' ' + repr(self.audio_features)
 
         return string
+
+    def __eq__(self, other):
+        return isinstance(other, SpotifyTrack) and other.uri == self.uri
 
     @staticmethod
     def wrap(uri: Uri = None,
