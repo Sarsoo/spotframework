@@ -122,9 +122,9 @@ def go():
                 logger.critical('none to execute, terminating')
                 return
 
-            net = Network(NetworkUser(os.environ['SPOTCLIENT'],
-                                      os.environ['SPOTSECRET'],
-                                      os.environ['SPOTREFRESH']))
+            net = Network(NetworkUser(os.environ['SPOT_CLIENT'],
+                                      os.environ['SPOT_SECRET'],
+                                      os.environ['SPOT_REFRESH']))
             net.user.refresh_access_token()
 
             engine = PlaylistEngine(net)

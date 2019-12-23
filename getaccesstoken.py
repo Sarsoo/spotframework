@@ -15,9 +15,9 @@ logger.addHandler(stream_handler)
 
 if __name__ == '__main__':
 
-    network = Network(NetworkUser(os.environ['SPOTCLIENT'],
-                                  os.environ['SPOTSECRET'],
-                                  os.environ['SPOTREFRESH']))
+    network = Network(NetworkUser(os.environ['SPOT_CLIENT'],
+                                  os.environ['SPOT_SECRET'],
+                                  os.environ['SPOT_REFRESH']))
     network.user.refresh_access_token()
 
     print(network.user.access_token)

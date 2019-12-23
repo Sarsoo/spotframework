@@ -42,9 +42,9 @@ if __name__ == '__main__':
 
     try:
 
-        network = Network(NetworkUser(os.environ['SPOTCLIENT'],
-                                      os.environ['SPOTSECRET'],
-                                      os.environ['SPOTREFRESH']))
+        network = Network(NetworkUser(os.environ['SPOT_CLIENT'],
+                                      os.environ['SPOT_SECRET'],
+                                      os.environ['SPOT_REFRESH']))
         network.user.refresh_access_token()
 
         found = False

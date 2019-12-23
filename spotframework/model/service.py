@@ -25,7 +25,7 @@ class Context:
         return f'Context: {self.object_type} uri({self.uri})'
 
     def __str__(self):
-        return f'{self.object_type} / {self.uri}'
+        return str(self.uri)
 
 
 class Device:
@@ -110,4 +110,4 @@ class CurrentlyPlaying:
         else:
             playing = '(paused)'
 
-        return f'{playing} {self.track} on {self.device} ({self._format_duration(self.progress_ms)})'
+        return f'{playing} {self.track} on {self.device} from {self.context} ({self._format_duration(self.progress_ms)})'

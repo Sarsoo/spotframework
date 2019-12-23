@@ -28,9 +28,9 @@ logger.addHandler(stream_handler)
 
 def go(playlist_name):
 
-    net = Network(NetworkUser(os.environ['SPOTCLIENT'],
-                              os.environ['SPOTSECRET'],
-                              os.environ['SPOTREFRESH']))
+    net = Network(NetworkUser(os.environ['SPOT_CLIENT'],
+                              os.environ['SPOT_SECRET'],
+                              os.environ['SPOT_REFRESH']))
     net.user.refresh_access_token()
 
     engine = PlaylistEngine(net)
