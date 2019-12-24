@@ -38,12 +38,26 @@ class SearchResponse:
 
 
 class Network:
+    """Network layer class for reading and manipulating spotify service"""
 
     def __init__(self, user: NetworkUser):
+        """Create network using NetworkUser containing credentials
+
+        :param user: target spotify user
+        """
         self.user = user
         self.refresh_counter = 0
 
     def get_request(self, method, url=None, params=None, headers=None, whole_url=None) -> Optional[dict]:
+        """HTTP get request for reading from service
+
+        :param method: spotify api method for logging
+        :param url: query url string following hostname and api version
+        :param params: dictionary of query parameters
+        :param headers: additional request headers
+        :param whole_url: override base api url with new hostname and url
+        :return: dictionary of json response if available
+        """
 
         if headers is None:
             headers = dict()
@@ -100,6 +114,15 @@ class Network:
         return None
 
     def post_request(self, method, url, params=None, json=None, headers=None) -> Optional[Response]:
+        """HTTP post request for reading from service
+
+        :param method: spotify api method for logging
+        :param url: query url string following hostname and api version
+        :param params: dictionary of query parameters
+        :param json: dictionary request body for conversion to json during transmission
+        :param headers: additional request headers
+        :return: response object if available
+        """
 
         if headers is None:
             headers = dict()
@@ -149,6 +172,15 @@ class Network:
         return None
 
     def put_request(self, method, url, params=None, json=None, headers=None) -> Optional[Response]:
+        """HTTP put request for reading from service
+
+        :param method: spotify api method for logging
+        :param url: query url string following hostname and api version
+        :param params: dictionary of query parameters
+        :param json: dictionary request body for conversion to json during transmission
+        :param headers: additional request headers
+        :return: response object if available
+        """
 
         if headers is None:
             headers = dict()
@@ -201,7 +233,13 @@ class Network:
                      uri: Uri = None,
                      uri_string: str = None,
                      tracks: bool = True) -> Optional[SpotifyPlaylist]:
-        """get playlist object with tracks for uri"""
+        """get playlist object with tracks for uri
+
+        :param uri: target request uri
+        :param uri_string: target request uri as string
+        :param tracks: populate tracks of playlist during generation
+        :return: playlist object
+        """
 
         if uri is None and uri_string is None:
             raise NameError('no uri provided')
@@ -237,7 +275,15 @@ class Network:
                         public: bool = True,
                         collaborative: bool = False,
                         description: bool = None) -> Optional[SpotifyPlaylist]:
-        """create playlist for user"""
+        """create playlist for user
+
+        :param username: username for playlist creation
+        :param name: new playlist name
+        :param public: make playlist public
+        :param collaborative: make playlist collaborative
+        :param description: description for new playlist
+        :return: newly created playlist object
+        """
 
         json = {"name": name, "public": public, "collaborative": collaborative}
 
@@ -253,7 +299,11 @@ class Network:
             return None
 
     def get_playlists(self, response_limit: int = None) -> Optional[List[SpotifyPlaylist]]:
-        """get current users playlists"""
+        """get current users playlists
+
+        :param response_limit: max playlists to return
+        :return: List of user created and followed playlists if available
+        """
 
         logger.info(f"loading")
 
@@ -267,7 +317,11 @@ class Network:
         return return_items
 
     def get_library_albums(self, response_limit: int = None) -> Optional[List[LibraryAlbum]]:
-        """get user library albums"""
+        """get user library albums
+
+        :param response_limit: max albums to return
+        :return: List of user library albums if available
+        """
 
         logger.info(f"loading")
 
@@ -281,7 +335,11 @@ class Network:
         return return_items
 
     def get_library_tracks(self, response_limit: int = None) -> Optional[List[LibraryTrack]]:
-        """get user library tracks"""
+        """get user library tracks
+
+        :param response_limit: max tracks to return
+        :return: List of saved library trakcs if available
+        """
 
         logger.info(f"loading")
 
@@ -295,7 +353,10 @@ class Network:
         return return_items
 
     def get_user_playlists(self) -> Optional[List[SpotifyPlaylist]]:
-        """filter user playlists for those that were user created"""
+        """retrieve user owned playlists
+
+        :return: List of user owned playlists if available
+        """
 
         logger.info('retrieved')
 
@@ -314,7 +375,13 @@ class Network:
                             uri: Uri = None,
                             uri_string: str = None,
                             response_limit: int = None) -> List[PlaylistTrack]:
-        """get list of playlists tracks for uri"""
+        """get list of playlists tracks for uri
+
+        :param uri: target playlist uri
+        :param uri_string: target playlist uri as string
+        :param response_limit: max tracks to return
+        :return: list of playlist tracks if available
+        """
 
         if uri is None and uri_string is None:
             raise NameError('no uri provided')
@@ -349,7 +416,13 @@ class Network:
                                    response_limit: int = None,
                                    after: datetime.datetime = None,
                                    before: datetime.datetime = None) -> Optional[List[PlayedTrack]]:
-        """get list of recently played tracks"""
+        """get list of recently played tracks
+
+        :param response_limit: max number of tracks to return
+        :param after: datetime after which to return tracks
+        :param before: datetime before which to return tracks
+        :return: list of recently played tracks if available
+        """
 
         logger.info("retrieving")
 
@@ -389,7 +462,11 @@ class Network:
             return None
 
     def get_device_id(self, device_name: str) -> Optional[str]:
-        """return device id of device as searched for by name"""
+        """return device id of device as searched for by name
+
+        :param device_name: target device name
+        :return: device ID
+        """
 
         logger.info(f"{device_name}")
 

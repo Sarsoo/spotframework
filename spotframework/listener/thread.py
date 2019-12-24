@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 class ListenerThread(threading.Thread):
+    """Background thread for wrapping around and continuously updating Listener object"""
 
     def __init__(self,
                  net: Network,
@@ -21,6 +22,7 @@ class ListenerThread(threading.Thread):
         self.listener = Listener(net=net, request_size=request_size)
 
     def stop(self):
+        """stop thread"""
         logger.info('stopping thread')
         self._stop_event.set()
 
@@ -28,6 +30,7 @@ class ListenerThread(threading.Thread):
         return self._stop_event.is_set()
 
     def run(self):
+        """iterating method"""
         while not self.stopped():
             self.listener.update_recent_tracks()
             self.listener.update_now_playing()

@@ -32,6 +32,8 @@ def check_last_dataset(func):
 
 
 class ListenCmd(Cmd):
+    """cmd utility class for interacting with Listener and associated async thread"""
+
     intro = 'listener... ? for help'
     prompt = '(listen)> '
 
@@ -47,6 +49,7 @@ class ListenCmd(Cmd):
         self.log_stream_handler = log_stream_handler
 
     def start_listener(self):
+        """start listener thread if not running, else restart thread"""
         if self.listen_thread is not None:
             logger.info('restarting')
             print('>> restarting listener')
@@ -60,16 +63,23 @@ class ListenCmd(Cmd):
 
     @check_thread
     def stop_listener(self):
+        """kill listener thread"""
         logger.info('stopping')
         print('>> stopping listener')
         self.last_listener = self.listen_thread.listener
         self.listen_thread.stop()
 
     def print_tracks(self, tracks):
+        """print played tracks with timecodes
+
+        :param tracks: list of target track objects
+        :return: None
+        """
         [print(f'({i.played_at.strftime(self.dt_format)}) {i.name} / {i.artists_names}')
          for i in tracks]
 
     def print(self):
+        """display previously and currently playing tracks"""
         if self.listen_thread is not None:
             self.print_tracks(self.listen_thread.listener.recent_tracks)
             print('now playing:', self.listen_thread.listener.now_playing)
@@ -80,6 +90,11 @@ class ListenCmd(Cmd):
 
     @check_thread
     def set_poll_interval(self, value):
+        """set polling interval on background thread
+
+        :param value: new time value in seconds
+        :return: None
+        """
         if value.isdigit():
             logger.info(f'setting polling interval to {value}')
             print(f'>> interval set to {value}')

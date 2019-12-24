@@ -8,6 +8,8 @@ logger = logging.getLogger(__name__)
 
 
 class Listener:
+    """Stateful storage of spotify recent listening history and currently playing"""
+    
     def __init__(self,
                  net: Network,
                  request_size: int = 20,
@@ -23,6 +25,7 @@ class Listener:
         self.on_playback_change = []
 
     def update_now_playing(self):
+        """update currently playing values"""
         logger.debug('updating now playing')
         live_now_playing = self.net.get_player()
 
@@ -38,6 +41,7 @@ class Listener:
             self.now_playing = live_now_playing
 
     def update_recent_tracks(self):
+        """retrieve recently played tracks and merge with previously stored"""
         logger.debug('updating recent tracks')
         tracks = self.net.get_recently_played_tracks(response_limit=self.request_size)
         if tracks is not None:
