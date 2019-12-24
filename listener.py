@@ -7,9 +7,12 @@ from spotframework.net.network import Network, NetworkUser
 
 logger = logging.getLogger('spotframework')
 
+if not os.path.exists('.spot'):
+    os.mkdir('.spot')
+
 log_format = '%(asctime)s %(levelname)s %(name)s:%(funcName)s - %(message)s'
 
-file_handler = logging.FileHandler("data/listener.log")
+file_handler = logging.FileHandler(".spot/listener.log")
 formatter = logging.Formatter(log_format)
 file_handler.setFormatter(formatter)
 

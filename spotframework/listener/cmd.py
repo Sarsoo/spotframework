@@ -41,7 +41,7 @@ class ListenCmd(Cmd):
         Cmd.__init__(self)
         self.net = net
         self.listen_thread: Optional[ListenerThread] = None
-        self.last_dataset = None
+        self.last_listener = None
 
         self.verbose = False
         self.log_stream_handler = log_stream_handler
@@ -55,14 +55,14 @@ class ListenCmd(Cmd):
         logger.info('starting')
         print('>> starting listener')
         self.listen_thread = ListenerThread(self.net)
-        self.listen_thread.on_playback_change.append(lambda x: print(f'playback changed -> {x}'))
+        self.listen_thread.listener.on_playback_change.append(lambda x: print(f'playback changed -> {x}'))
         self.listen_thread.start()
 
     @check_thread
     def stop_listener(self):
         logger.info('stopping')
         print('>> stopping listener')
-        self.last_dataset = self.listen_thread.recent_tracks
+        self.last_listener = self.listen_thread.listener
         self.listen_thread.stop()
 
     def print_tracks(self, tracks):
@@ -71,10 +71,10 @@ class ListenCmd(Cmd):
 
     def print(self):
         if self.listen_thread is not None:
-            print('now playing:', self.listen_thread.now_playing)
-            self.print_tracks(self.listen_thread.recent_tracks)
-        elif self.last_dataset is not None:
-            self.print_tracks(self.last_dataset)
+            self.print_tracks(self.listen_thread.listener.recent_tracks)
+            print('now playing:', self.listen_thread.listener.now_playing)
+        elif self.last_listener is not None:
+            self.print_tracks(self.last_listener.recent_tracks)
         else:
             print('>> no tracks to print')
 

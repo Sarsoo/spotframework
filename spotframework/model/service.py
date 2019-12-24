@@ -21,6 +21,9 @@ class Context:
         self.href = href
         self.external_spot = external_spot
 
+    def __eq__(self, other):
+        return isinstance(other, Context) and other.uri == self.uri
+
     def __repr__(self):
         return f'Context: {self.object_type} uri({self.uri})'
 
@@ -95,7 +98,7 @@ class CurrentlyPlaying:
             f'repeat({self.repeat}) time({self.timestamp})'
 
     def __eq__(self, other):
-        return isinstance(other, CurrentlyPlaying) and other.track == self.track
+        return isinstance(other, CurrentlyPlaying) and other.track == self.track and other.context == self.context
 
     @staticmethod
     def _format_duration(duration):
