@@ -44,8 +44,8 @@ class Track:
         return ', '.join(string_list)
 
     def __str__(self):
-        album = self.album.name if self.album else 'n/a'
-        artists = ', '.join([i.name for i in self.artists]) if self.artists else 'n/a'
+        album = self.album.name if self.album is not None else 'n/a'
+        artists = ', '.join([i.name for i in self.artists]) if self.artists is not None else 'n/a'
 
         return f'{self.name} / {album} / {artists}'
 

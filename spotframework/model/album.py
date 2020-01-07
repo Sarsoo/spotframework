@@ -27,7 +27,7 @@ class Album:
         return ', '.join(string_list)
 
     def __str__(self):
-        artists = ', '.join([i.name for i in self.artists]) if self.artists else 'n/a'
+        artists = ', '.join([i.name for i in self.artists]) if self.artists is not None else 'n/a'
 
         return f'{self.name} / {artists}'
 

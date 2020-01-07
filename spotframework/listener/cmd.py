@@ -3,6 +3,7 @@ import functools
 import logging
 from typing import Optional
 
+from spotframework.util.console import Color
 from spotframework.net.network import Network
 from spotframework.listener.thread import ListenerThread
 
@@ -75,7 +76,8 @@ class ListenCmd(Cmd):
         :param tracks: list of target track objects
         :return: None
         """
-        [print(f'({i.played_at.strftime(self.dt_format)}) {i.name} / {i.artists_names}')
+        [print(f'({i.played_at.strftime(self.dt_format)}) {Color.BOLD}{Color.RED}{i.name}{Color.END} / '
+               f'{i.album.name} / {Color.BOLD}{Color.BLUE}{i.artists_names}{Color.END}')
          for i in tracks]
 
     def print(self):
