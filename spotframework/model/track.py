@@ -308,6 +308,27 @@ class AudioFeatures:
         self.track_href = track_href
         self.valence = self.check_float(valence)
 
+    def to_dict(self):
+        return {
+            'acousticness': self.acousticness,
+            'analysis_url': self.analysis_url,
+            'danceability': self.danceability,
+            'duration_ms': self.duration_ms,
+            'energy': self.energy,
+            'uri': str(self.uri) if self.uri is not None else None,
+            'instrumentalness': self.instrumentalness,
+            'key': self.key,
+            'key_code': self._key,
+            'liveness': self.liveness,
+            'loudness': self.loudness,
+            'mode': self.mode.value,
+            'speechiness': self.speechiness,
+            'tempo': self.tempo,
+            'time_signature': self.time_signature,
+            'track_href': self.track_href,
+            'valence': self.valence
+        }
+
     @property
     def key(self) -> str:
         legend = {

@@ -808,8 +808,13 @@ class Network:
 
             if resp:
                 if resp.get('audio_features', None):
-                    parsed_features = [self.parse_audio_features(i) for i in resp['audio_features']]
-                    audio_features += parsed_features
+
+                    for feature in resp['audio_features']:
+                        if feature is not None:
+                            audio_features.append(self.parse_audio_features(feature))
+                        else:
+                            audio_features.append(None)
+
                 else:
                     logger.error('no audio features included')
             else:
@@ -840,6 +845,9 @@ class Network:
                 audio_features = self.get_track_audio_features([i.uri for i in tracks])
 
                 if audio_features:
+                    if len(audio_features) != len(tracks):
+                        logger.error(f'{len(audio_features)} features returned for {len(tracks)} tracks')
+
                     for index, track in enumerate(tracks):
                         track.audio_features = audio_features[index]
 
