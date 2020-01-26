@@ -182,6 +182,10 @@ class PlaylistEngine:
         if suffix:
             string += f' - {str(suffix)}'
 
+        if string is None or len(string) == 0:
+            logger.error('no string generated')
+            return None
+
         resp = self.net.change_playlist_details(uri, description=string)
         if resp:
             return resp

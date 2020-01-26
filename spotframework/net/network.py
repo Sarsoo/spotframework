@@ -70,7 +70,7 @@ class Network:
             req = requests.get(const.api_url + url, params=params, headers=headers)
 
         if 200 <= req.status_code < 300:
-            logger.debug(f'{method} get {req.status_code}')
+            logger.debug(f'{method} get {url if whole_url is not None else whole_url} {req.status_code}')
 
             if req.status_code != 204:
                 return req.json()
@@ -91,7 +91,7 @@ class Network:
                         logger.error(f'{method} rate limit reached: cannot find Retry-After header')
                 else:
                     self.refresh_counter = 0
-                    logger.critical(f'refresh token limit (5) reached')
+                    logger.critical(f'{method} refresh token limit (5) reached')
 
             elif req.status_code == 401:
                 logger.warning(f'{method} access token expired, refreshing')
@@ -101,7 +101,7 @@ class Network:
                     return self.get_request(method, url, params, headers)
                 else:
                     self.refresh_counter = 0
-                    logger.critical(f'refresh token limit (5) reached')
+                    logger.critical(f'{method} refresh token limit (5) reached')
 
             else:
                 error = req.json().get('error', None)
@@ -132,7 +132,7 @@ class Network:
         req = requests.post(const.api_url + url, params=params, json=json, headers=headers)
 
         if 200 <= req.status_code < 300:
-            logger.debug(f'{method} post {req.status_code}')
+            logger.debug(f'{method} post {url} {req.status_code}')
             return req
         else:
 
@@ -149,7 +149,7 @@ class Network:
                         logger.error(f'{method} rate limit reached: cannot find Retry-After header')
                 else:
                     self.refresh_counter = 0
-                    logger.critical(f'refresh token limit (5) reached')
+                    logger.critical(f'{method} refresh token limit (5) reached')
 
             elif req.status_code == 401:
                 logger.warning(f'{method} access token expired, refreshing')
@@ -159,7 +159,7 @@ class Network:
                     return self.post_request(method, url, params, json, headers)
                 else:
                     self.refresh_counter = 0
-                    logger.critical(f'refresh token limit (5) reached')
+                    logger.critical(f'{method} refresh token limit (5) reached')
 
             else:
                 error = req.json().get('error', None)
@@ -190,7 +190,7 @@ class Network:
         req = requests.put(const.api_url + url, params=params, json=json, headers=headers)
 
         if 200 <= req.status_code < 300:
-            logger.debug(f'{method} put {req.status_code}')
+            logger.debug(f'{method} put {url} {req.status_code}')
             return req
         else:
 
@@ -207,7 +207,7 @@ class Network:
                         logger.error(f'{method} rate limit reached: cannot find Retry-After header')
                 else:
                     self.refresh_counter = 0
-                    logger.critical(f'refresh token limit (5) reached')
+                    logger.critical(f'{method} refresh token limit (5) reached')
 
             elif req.status_code == 401:
                 logger.warning(f'{method} access token expired, refreshing')
@@ -217,7 +217,7 @@ class Network:
                     return self.put_request(method, url, params, json, headers)
                 else:
                     self.refresh_counter = 0
-                    logger.critical(f'refresh token limit (5) reached')
+                    logger.critical(f'{method} refresh token limit (5) reached')
 
             else:
                 error = req.json().get('error', None)
@@ -256,12 +256,14 @@ class Network:
 
             if tracks and resp.get('tracks'):
                 if 'next' in resp['tracks']:
+                    logger.debug(f'paging tracks for {uri}')
 
                     track_pager = PageCollection(net=self, page=resp['tracks'])
                     track_pager.continue_iteration()
 
                     playlist.tracks = [self.parse_track(i) for i in track_pager.items]
                 else:
+                    logger.debug(f'parsing {len(resp.get("tracks"))} tracks for {uri}')
                     playlist.tracks = [self.parse_track(i) for i in resp.get('tracks', [])]
 
             return playlist
@@ -284,6 +286,8 @@ class Network:
         :param description: description for new playlist
         :return: newly created playlist object
         """
+        logger.info(f'creating {name} for {username}, '
+                    f'public: {public}, collaborative: {collaborative}, description: {description}')
 
         json = {"name": name, "public": public, "collaborative": collaborative}
 
@@ -305,7 +309,7 @@ class Network:
         :return: List of user created and followed playlists if available
         """
 
-        logger.info(f"loading")
+        logger.info(f"paging playlists")
 
         pager = PageCollection(net=self, url='me/playlists', name='getPlaylists')
         if response_limit:
@@ -313,6 +317,9 @@ class Network:
         pager.iterate()
 
         return_items = [self.parse_playlist(i) for i in pager.items]
+
+        if len(return_items) == 0:
+            logger.error('no playlists returned')
 
         return return_items
 
@@ -323,7 +330,7 @@ class Network:
         :return: List of user library albums if available
         """
 
-        logger.info(f"loading")
+        logger.info(f"paging library albums")
 
         pager = PageCollection(net=self, url='me/albums', name='getLibraryAlbums')
         if response_limit:
@@ -331,6 +338,9 @@ class Network:
         pager.iterate()
 
         return_items = [self.parse_album(i) for i in pager.items]
+
+        if len(return_items) == 0:
+            logger.error('no albums returned')
 
         return return_items
 
@@ -341,7 +351,7 @@ class Network:
         :return: List of saved library trakcs if available
         """
 
-        logger.info(f"loading")
+        logger.info(f"paging library tracks")
 
         pager = PageCollection(net=self, url='me/tracks', name='getLibraryTracks')
         if response_limit:
@@ -349,6 +359,9 @@ class Network:
         pager.iterate()
 
         return_items = [self.parse_track(i) for i in pager.items]
+
+        if len(return_items) == 0:
+            logger.error('no tracks returned')
 
         return return_items
 
@@ -358,18 +371,18 @@ class Network:
         :return: List of user owned playlists if available
         """
 
-        logger.info('retrieved')
+        logger.info('pulling all playlists')
 
         playlists = self.get_playlists()
 
         if self.user.username is None:
+            logger.debug('no user info, refreshing for filter')
             self.user.refresh_info()
 
         if playlists is not None:
             return list(filter(lambda x: x.owner.username == self.user.username, playlists))
         else:
             logger.error('no playlists returned to filter')
-            return None
 
     def get_playlist_tracks(self,
                             uri: Uri = None,
@@ -389,7 +402,7 @@ class Network:
         if uri_string is not None:
             uri = Uri(uri_string)
 
-        logger.info(f"loading")
+        logger.info(f"paging tracks for {uri}")
 
         pager = PageCollection(net=self, url=f'playlists/{uri.object_id}/tracks', name='getPlaylistTracks')
         if response_limit:
@@ -398,15 +411,20 @@ class Network:
 
         return_items = [self.parse_track(i) for i in pager.items]
 
+        if len(return_items) == 0:
+            logger.error('no tracks returned')
+
         return return_items
 
     def get_available_devices(self) -> Optional[List[Device]]:
         """get users available devices"""
 
-        logger.info("retrieving")
+        logger.info("polling available devices")
 
         resp = self.get_request('getAvailableDevices', 'me/player/devices')
         if resp:
+            if len(resp['devices']) == 0:
+                logger.error('no devices returned')
             return [self.parse_device(i) for i in resp['devices']]
         else:
             logger.error('no devices returned')
@@ -424,7 +442,7 @@ class Network:
         :return: list of recently played tracks if available
         """
 
-        logger.info("retrieving")
+        logger.info(f"paging {'all' if response_limit is None else response_limit} recent tracks ({after}/{before})")
 
         params = dict()
         if after and before:
@@ -447,19 +465,17 @@ class Network:
             return [self.parse_track(i) for i in pager.items]
         else:
             logger.error('no tracks returned')
-            return None
 
     def get_player(self) -> Optional[CurrentlyPlaying]:
         """get currently playing snapshot (player)"""
 
-        logger.info("retrieved")
+        logger.info("polling player")
 
         resp = self.get_request('getPlayer', 'me/player')
         if resp:
             return self.parse_currently_playing(resp)
         else:
             logger.info('no player returned')
-            return None
 
     def get_device_id(self, device_name: str) -> Optional[str]:
         """return device id of device as searched for by name
@@ -468,7 +484,7 @@ class Network:
         :return: device ID
         """
 
-        logger.info(f"{device_name}")
+        logger.info(f"querying {device_name}")
 
         devices = self.get_available_devices()
         if devices:
@@ -489,6 +505,8 @@ class Network:
             'device_ids': [device_id],
             'play': True
         }
+
+        logger.info(f'shifting playback to {device_id}')
 
         resp = self.put_request('changePlaybackDevice', 'me/player', json=json)
         if resp:
@@ -630,7 +648,7 @@ class Network:
         if uri_strings is not None:
             uris = [Uri(i) for i in uri_strings]
 
-        logger.info(f"{uri}")
+        logger.info(f"replacing {uri} with {'0' if uris is None else len(uris)} tracks")
 
         headers = {"Content-Type": "application/json"}
 
@@ -655,7 +673,8 @@ class Network:
                                 collaborative: bool = None,
                                 description: str = None) -> Optional[Response]:
 
-        logger.info(f"{uri}")
+        logger.info(f"updating {uri}, name: {name}, public: {public}, collab: {collaborative}, "
+                    f"description: {(description[:30] + '...' if len(description) > 33 else description) if description is not None else None}")
 
         headers = {"Content-Type": "application/json"}
 
@@ -687,7 +706,7 @@ class Network:
 
     def add_playlist_tracks(self, uri: Uri, uris: List[Uri]) -> List[dict]:
 
-        logger.info(f"{uri}")
+        logger.info(f"adding {len(uris)} tracks to {uri}")
 
         headers = {"Content-Type": "application/json"}
 
@@ -716,7 +735,9 @@ class Network:
                             artists: List[SpotifyArtist] = None,
                             response_limit=10) -> Optional[List[Track]]:
 
-        logger.info(f'sample size: {response_limit}')
+        logger.info(f'getting {response_limit} recommendations, '
+                    f'tracks: {len(tracks) if tracks is not None else 0}, '
+                    f'artists: {len(artists) if artists is not None else 0}')
 
         params = {'limit': response_limit}
 
@@ -745,9 +766,11 @@ class Network:
     def write_playlist_object(self,
                               playlist: SpotifyPlaylist,
                               append_tracks: bool = False):
+        logger.info(f'writing {playlist.name}, append tracks: {append_tracks}')
 
         if playlist.uri:
             if playlist.tracks == -1:
+                logger.debug(f'wiping {playlist.name} tracks')
                 self.replace_playlist_tracks(uri=playlist.uri, uris=[])
             elif playlist.tracks:
                 if append_tracks:
@@ -773,7 +796,7 @@ class Network:
                                 range_length: int,
                                 insert_before: int) -> Optional[Response]:
 
-        logger.info(f'id: {uri}')
+        logger.info(f'reordering {uri} tracks, start: {range_start}, length: {range_length}, before: {insert_before}')
 
         if range_start < 0:
             logger.error('range_start must be positive')
@@ -797,7 +820,7 @@ class Network:
             logger.error('error reordering playlist')
 
     def get_track_audio_features(self, uris: List[Uri]):
-        logger.info(f'ids: {len(uris)}')
+        logger.info(f'getting {len(uris)} features')
 
         audio_features = []
         chunked_uris = list(self.chunk(uris, 100))
@@ -826,7 +849,7 @@ class Network:
             logger.error('mismatched length of input and response')
 
     def populate_track_audio_features(self, tracks=Union[SpotifyTrack, List[SpotifyTrack]]):
-        logger.info(f'populating')
+        logger.info(f'populating {len(tracks)} features')
 
         if isinstance(tracks, SpotifyTrack):
             audio_features = self.get_track_audio_features([tracks.uri])
@@ -994,6 +1017,8 @@ class Network:
             'type': ','.join([i.name for i in query_types]),
             'limit': response_limit
         }
+
+        logger.info(f'querying track: {track}, album: {album}, artist: {artist}')
 
         resp = self.get_request(method='search', url='search', params=params)
 
@@ -1352,7 +1377,7 @@ class PageCollection:
                 raise IndexError('no pages')
 
     def iterate(self, url=None):
-        logger.debug(f'iterating {self.name}')
+        logger.debug(f'iterating {self.name}, {len(self.pages)}/{self.page_limit}')
 
         params = {'limit': self.page_limit}
         if url:
