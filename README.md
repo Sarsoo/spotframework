@@ -5,6 +5,8 @@ spotframework
 
 * **alarm**
 
+*unused at this point, obsolete since I've replaced the functionality with an iOS shortcut*
+
 daily script which finds this months playlist (eg. 'may 19') and starts playback on a specified device id. if the monthly playlist can't be found
 a fallback spotify uri is used.
 
@@ -13,16 +15,18 @@ as phones won't typically respond to pings unless the screen is on multiple ping
 
 * **backup**
 
-script to pull all user owned playlists and backup each to a separate csv file at the specified path
+Script to pull all user created playlists and backup each to a separate csv file at the specified path. Ran on a cron job.
 
 * **generate playlists**
 
-my spotify playlists are quite granular for different sub genres, this script takes groups of playlists and genereates one "super-playlist".
-took inspiriation from my main use of Paul Lamere's [smarter playlists](http://smarterplaylists.playlistmachinery.com/) 
+*obsolete since the creation of [Music Tools](https://music.sarsoo.xyz)*
 
-by default playlists are reverse release date sorted, adding a shuffle tag to the config will do so.
+My spotify playlists are quite granular for different sub genres, this script takes groups of playlists and genereates one "super-playlist".
+took inspiriation from my main use of Paul Lamere's [smarter playlists](http://smarterplaylists.playlistmachinery.com/).
 
-example config schema:
+By default playlists are reverse release date sorted, adding a shuffle tag to the config will do so.
+
+Example config schema:
 
 ```json
 {
