@@ -71,7 +71,7 @@ class PlaylistEngine:
                 else:
                     tracks += new_source.process(params=param)
 
-                logger.info(f'adding {str(param.source_type)} source')
+                logger.info(f'adding {param.source_type.__name__} source')
 
         if processors:
             for processor in processors:
