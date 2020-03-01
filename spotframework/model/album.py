@@ -1,5 +1,6 @@
 from __future__ import annotations
 from datetime import datetime
+from enum import Enum
 from typing import TYPE_CHECKING
 from typing import List, Union
 from spotframework.util.console import Color
@@ -45,9 +46,16 @@ class Album:
 
 
 class SpotifyAlbum(Album):
+
+    class Type(Enum):
+        single = 0
+        compilation = 1
+        album = 2
+
     def __init__(self,
                  name: str,
                  artists: List[Artist],
+                 album_type: Type,
 
                  href: str = None,
                  uri: Union[str, Uri] = None,
@@ -72,6 +80,8 @@ class SpotifyAlbum(Album):
         if self.uri:
             if self.uri.object_type != Uri.ObjectType.album:
                 raise TypeError('provided uri not for an album')
+
+        self.album_type = album_type
 
         self.genres = genres
 
@@ -101,6 +111,8 @@ class LibraryAlbum(SpotifyAlbum):
                  name: str,
                  artists: List[Artist],
 
+                 album_type: SpotifyAlbum.Type,
+
                  href: str = None,
                  uri: Union[str, Uri] = None,
 
@@ -117,6 +129,7 @@ class LibraryAlbum(SpotifyAlbum):
                  ):
         super().__init__(name=name,
                          artists=artists,
+                         album_type=album_type,
                          href=href,
                          uri=uri,
                          genres=genres,

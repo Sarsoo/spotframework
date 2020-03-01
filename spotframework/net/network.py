@@ -1062,6 +1062,11 @@ class Network:
 
         artists = [self.parse_artist(i) for i in album.get('artists', [])]
 
+        if album.get("album_type") is not None:
+            album_type = SpotifyAlbum.Type[album.get('album_type').lower()]
+        else:
+            album_type = SpotifyAlbum.Type.single
+
         href = album.get('href', None)
         uri = album.get('uri', None)
 
@@ -1092,6 +1097,8 @@ class Network:
             return LibraryAlbum(name=name,
                                 artists=artists,
 
+                                album_type=album_type,
+
                                 href=href,
                                 uri=uri,
 
@@ -1108,6 +1115,8 @@ class Network:
         else:
             return SpotifyAlbum(name=name,
                                 artists=artists,
+
+                                album_type=album_type,
 
                                 href=href,
                                 uri=uri,
@@ -1143,6 +1152,7 @@ class Network:
         uri = track.get('uri', None)
 
         disc_number = track.get('disc_number', None)
+        track_number = track.get('track_number', None)
         duration_ms = track.get('duration_ms', None)
         explicit = track.get('explicit', None)
         is_playable = track.get('is_playable', None)
@@ -1175,6 +1185,7 @@ class Network:
                                  uri=uri,
 
                                  disc_number=disc_number,
+                                 track_number=track_number,
                                  duration_ms=duration_ms,
                                  explicit=explicit,
                                  is_playable=is_playable,
@@ -1189,6 +1200,7 @@ class Network:
                                 uri=uri,
 
                                 disc_number=disc_number,
+                                track_number=track_number,
                                 duration_ms=duration_ms,
                                 explicit=explicit,
                                 is_playable=is_playable,
@@ -1204,6 +1216,7 @@ class Network:
                                uri=uri,
 
                                disc_number=disc_number,
+                               track_number=track_number,
                                duration_ms=duration_ms,
                                explicit=explicit,
                                is_playable=is_playable,
@@ -1220,6 +1233,7 @@ class Network:
                                 uri=uri,
 
                                 disc_number=disc_number,
+                                track_number=track_number,
                                 duration_ms=duration_ms,
                                 explicit=explicit,
                                 is_playable=is_playable,

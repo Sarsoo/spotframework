@@ -1,7 +1,10 @@
 from spotframework.engine.processor.abstract import BatchSingleProcessor, BatchSingleTypeAwareProcessor
 from typing import List
+import logging
 from spotframework.model.track import Track, SpotifyTrack
 from spotframework.model.uri import Uri
+
+logger = logging.getLogger(__name__)
 
 
 class DeduplicateByID(BatchSingleTypeAwareProcessor):
@@ -31,12 +34,21 @@ class DeduplicateByName(BatchSingleProcessor):
         return_tracks = []
 
         for to_check in tracks:
+            to_check_artists = [i.name.lower() for i in to_check.artists]
 
-            for cache_track in return_tracks:
-                if to_check.name.lower() == cache_track.name.lower():
-                    if to_check.artists[0].name.lower() == cache_track.artists[0].name.lower():
-                        break
+            for index, _track in enumerate(return_tracks):
+                if to_check.name.lower() == _track.name.lower():
+                    
+                    _track_artists = [i.name.lower() for i in _track.artists]
+                    if all((i in _track_artists for i in to_check_artists)):  # CHECK ARTISTS MATCH
+
+                        # CHECK ALBUM TYPE, PREFER ALBUMS OVER SINGLES ETC
+                        if to_check.album.album_type.value > _track.album.album_type.value:
+                            logger.debug(f'better track source found, {to_check} ({to_check.album.album_type}) '
+                                         f'> {_track} ({_track.album.album_type})')
+                            return_tracks[index] = to_check  # REPLACE
+                        break  # FOUND, ESCAPE
             else:
-                return_tracks.append(to_check)
+                return_tracks.append(to_check)  # NOT FOUND, ADD TO RETURN
 
         return return_tracks

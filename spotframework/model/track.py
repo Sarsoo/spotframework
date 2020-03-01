@@ -7,7 +7,7 @@ from spotframework.util.console import Color
 from spotframework.util import convert_ms_to_minute_string
 from enum import Enum
 if TYPE_CHECKING:
-    from spotframework.model.album import Album
+    from spotframework.model.album import Album, SpotifyAlbum
     from spotframework.model.artist import Artist
     from spotframework.model.user import User
     from spotframework.model.service import Context
@@ -20,6 +20,7 @@ class Track:
                  artists: List[Artist],
 
                  disc_number: int = None,
+                 track_number: int = None,
                  duration_ms: int = None,
                  excplicit: bool = None
                  ):
@@ -28,6 +29,7 @@ class Track:
         self.artists = artists
 
         self.disc_number = disc_number
+        self.track_number = track_number
         self.duration_ms = duration_ms
         self.explicit = excplicit
 
@@ -69,13 +71,14 @@ class Track:
 class SpotifyTrack(Track):
     def __init__(self,
                  name: str,
-                 album: Album,
+                 album: SpotifyAlbum,
                  artists: List[Artist],
 
                  href: str = None,
                  uri: Union[str, Uri] = None,
 
                  disc_number: int = None,
+                 track_number: int = None,
                  duration_ms: int = None,
                  explicit: bool = None,
                  is_playable: bool = None,
@@ -86,6 +89,7 @@ class SpotifyTrack(Track):
                  ):
         super().__init__(name=name, album=album, artists=artists,
                          disc_number=disc_number,
+                         track_number=track_number,
                          duration_ms=duration_ms,
                          excplicit=explicit)
 
@@ -131,13 +135,14 @@ class SpotifyTrack(Track):
 class LibraryTrack(SpotifyTrack):
     def __init__(self,
                  name: str,
-                 album: Album,
+                 album: SpotifyAlbum,
                  artists: List[Artist],
 
                  href: str = None,
                  uri: Union[str, Uri] = None,
 
                  disc_number: int = None,
+                 track_number: int = None,
                  duration_ms: int = None,
                  explicit: bool = None,
                  is_playable: bool = None,
@@ -153,6 +158,7 @@ class LibraryTrack(SpotifyTrack):
                          uri=uri,
 
                          disc_number=disc_number,
+                         track_number=track_number,
                          duration_ms=duration_ms,
                          explicit=explicit,
                          is_playable=is_playable,
@@ -174,7 +180,7 @@ class LibraryTrack(SpotifyTrack):
 class PlaylistTrack(SpotifyTrack):
     def __init__(self,
                  name: str,
-                 album: Album,
+                 album: SpotifyAlbum,
                  artists: List[Artist],
 
                  added_at: datetime,
@@ -185,6 +191,7 @@ class PlaylistTrack(SpotifyTrack):
                  uri: Union[str, Uri] = None,
 
                  disc_number: int = None,
+                 track_number: int = None,
                  duration_ms: int = None,
                  explicit: bool = None,
                  is_playable: bool = None,
@@ -198,6 +205,7 @@ class PlaylistTrack(SpotifyTrack):
                          uri=uri,
 
                          disc_number=disc_number,
+                         track_number=track_number,
                          duration_ms=duration_ms,
                          explicit=explicit,
                          is_playable=is_playable,
@@ -221,13 +229,14 @@ class PlaylistTrack(SpotifyTrack):
 class PlayedTrack(SpotifyTrack):
     def __init__(self,
                  name: str,
-                 album: Album,
+                 album: SpotifyAlbum,
                  artists: List[Artist],
 
                  href: str = None,
                  uri: Union[str, Uri] = None,
 
                  disc_number: int = None,
+                 track_number: int = None,
                  duration_ms: int = None,
                  explicit: bool = None,
                  is_playable: bool = None,
@@ -245,6 +254,7 @@ class PlayedTrack(SpotifyTrack):
 
                          disc_number=disc_number,
                          duration_ms=duration_ms,
+                         track_number=track_number,
                          explicit=explicit,
                          is_playable=is_playable,
                          popularity=popularity,
