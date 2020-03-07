@@ -1275,6 +1275,10 @@ class Network:
         public = playlist_dict.get('public', None)
         uri = playlist_dict.get('uri', None)
 
+        images = playlist_dict.get('images', [])
+        images.sort(key=lambda x: x.get('height', 0))
+        images = [i.get('url') for i in images]
+
         return SpotifyPlaylist(uri=uri,
                                name=name,
                                owner=owner,
@@ -1282,7 +1286,8 @@ class Network:
                                href=href,
                                collaborative=collaborative,
                                public=public,
-                               ext_spotify=ext_spotify)
+                               ext_spotify=ext_spotify,
+                               images=images)
 
     @staticmethod
     def parse_context(context_dict) -> Context:

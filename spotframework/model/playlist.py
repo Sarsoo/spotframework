@@ -130,7 +130,8 @@ class SpotifyPlaylist(Playlist):
 
                  collaborative: bool = None,
                  public: bool = None,
-                 ext_spotify: str = None):
+                 ext_spotify: str = None,
+                 images: List[str] = None):
 
         super().__init__(name=name, description=description)
 
@@ -148,6 +149,7 @@ class SpotifyPlaylist(Playlist):
         self.collaborative = collaborative
         self.public = public
         self.ext_spotify = ext_spotify
+        self.images = images
 
     def __str__(self):
 
