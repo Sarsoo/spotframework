@@ -53,25 +53,18 @@ class PlaylistEngine:
 
         for param in params:
             source = next((i for i in self.sources if isinstance(i, param.source_type)), None)
-            if source:
-                if source.loaded is False:
-                    source.load()
-
-                if isinstance(source, RecommendationSource) and isinstance(param, RecommendationSource.Params):
-                    tracks += source.process(params=param, uris=[i.uri for i in tracks])
-                else:
-                    tracks += source.process(params=param)
-            else:
-                new_source = param.source_type(net=self.net)
-                new_source.load()
-                self.sources.append(new_source)
-
-                if isinstance(new_source, RecommendationSource) and isinstance(param, RecommendationSource.Params):
-                    tracks += new_source.process(params=param, uris=[i.uri for i in tracks])
-                else:
-                    tracks += new_source.process(params=param)
-
+            if source is None:
+                source = param.source_type(net=self.net)
+                self.sources.append(source)
                 logger.info(f'adding {param.source_type.__name__} source')
+
+            if source.loaded is False:
+                source.load()
+
+            if isinstance(source, RecommendationSource) and isinstance(param, RecommendationSource.Params):
+                tracks += source.process(params=param, uris=[i.uri for i in tracks])
+            else:
+                tracks += source.process(params=param)
 
         if processors:
             for processor in processors:
