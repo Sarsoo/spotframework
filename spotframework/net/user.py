@@ -49,7 +49,7 @@ class NetworkUser(User):
 
         data = {"grant_type": "refresh_token", "refresh_token": self.refresh_token}
 
-        now = datetime.now(timezone.utc)
+        now = datetime.utcnow()
         req = requests.post('https://accounts.spotify.com/api/token', data=data, headers=headers)
    
         if 200 <= req.status_code < 300:
