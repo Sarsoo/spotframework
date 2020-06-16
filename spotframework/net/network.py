@@ -731,8 +731,8 @@ class Network:
             return []
 
     def get_recommendations(self,
-                            tracks: List[Track] = None,
-                            artists: List[SpotifyArtist] = None,
+                            tracks: List[str] = None,
+                            artists: List[str] = None,
                             response_limit=10) -> Optional[List[Track]]:
 
         logger.info(f'getting {response_limit} recommendations, '
@@ -743,10 +743,10 @@ class Network:
 
         if tracks:
             random.shuffle(tracks)
-            params['seed_tracks'] = tracks[:100]
+            params['seed_tracks'] = tracks[:5]
         if artists:
             random.shuffle(artists)
-            params['seed_artists'] = artists[:100]
+            params['seed_artists'] = artists[:5]
 
         if len(params) == 1:
             logger.warning('update dictionairy length 0')
