@@ -1,4 +1,5 @@
 import math
+from spotframework.model.uri import Uri
 
 
 def convert_ms_to_minute_string(ms):
@@ -6,3 +7,11 @@ def convert_ms_to_minute_string(ms):
     minutes = math.floor(seconds / 60)
 
     return f'{minutes}:{math.floor(seconds%60)}'
+
+
+def validate_uri_string(uri_string: str):
+    try:
+        uri = Uri(uri_string)
+        return uri
+    except ValueError:
+        return False

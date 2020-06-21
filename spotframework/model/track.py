@@ -1,322 +1,182 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
-from typing import List, Union
+from typing import TYPE_CHECKING, Union, List
 from datetime import datetime
+from dataclasses import dataclass, field
+
+import spotframework.model
 from spotframework.model.uri import Uri
-from spotframework.util.console import Color
-from spotframework.util import convert_ms_to_minute_string
 from enum import Enum
+import spotframework.model.album
+import spotframework.model.artist
+import spotframework.model.service
 if TYPE_CHECKING:
-    from spotframework.model.album import Album, SpotifyAlbum
-    from spotframework.model.artist import Artist
-    from spotframework.model.user import User
-    from spotframework.model.service import Context
+    from spotframework.model.user import PublicUser
 
 
-class Track:
-    def __init__(self,
-                 name: str,
-                 album: Album,
-                 artists: List[Artist],
+@dataclass
+class SimplifiedTrack:
+    artists: List[spotframework.model.artist.SimplifiedArtist]
+    available_markets: List[str]
+    disc_number: int
+    duration_ms: int
+    external_urls: dict
+    explicit: bool
+    href: str
+    id: str
+    name: str
+    preview_url: str
+    track_number: int
+    type: str
+    uri: Union[str, Uri]
+    is_local: bool
+    is_playable: bool = None
+    episode: bool = None
+    track: bool = None
 
-                 disc_number: int = None,
-                 track_number: int = None,
-                 duration_ms: int = None,
-                 excplicit: bool = None
-                 ):
-        self.name = name
-        self.album = album
-        self.artists = artists
+    def __post_init__(self):
+        if isinstance(self.uri, str):
+            self.uri = Uri(self.uri)
 
-        self.disc_number = disc_number
-        self.track_number = track_number
-        self.duration_ms = duration_ms
-        self.explicit = excplicit
+        if self.uri:
+            if self.uri.object_type != Uri.ObjectType.track:
+                raise TypeError('provided uri not for a track')
+
+        if all((isinstance(i, dict) for i in self.artists)):
+            self.artists = [spotframework.model.artist.SimplifiedArtist(**i) for i in self.artists]
 
     @property
     def artists_names(self) -> str:
         return self._join_strings([i.name for i in self.artists])
-
-    @property
-    def album_artists_names(self) -> str:
-        return self.album.artists_names
 
     @staticmethod
     def _join_strings(string_list: List[str]):
         return ', '.join(string_list)
 
     def __str__(self):
-        album = self.album.name if self.album is not None else 'n/a'
         artists = ', '.join([i.name for i in self.artists]) if self.artists is not None else 'n/a'
 
-        return f'{self.name} / {album} / {artists}'
-
-    def __repr__(self):
-        return Color.YELLOW + Color.BOLD + 'Track' + Color.END + \
-               f': {self.name}, ({self.album}), {self.artists}'
+        return f'{self.name} / {artists}'
 
     def __eq__(self, other):
-        return isinstance(other, Track) and other.name == self.name and other.artists == self.artists
-
-    @staticmethod
-    def wrap(name: str = None,
-             artists: List[str] = None,
-             album: str = None,
-             album_artists: List[str] = None):
-        return Track(name=name,
-                     album=Album.wrap(name=album, artists=album_artists),
-                     artists=[Artist(i) for i in artists])
+        return isinstance(other, SimplifiedTrack) and other.name == self.name and other.artists == self.artists
 
 
-class SpotifyTrack(Track):
-    def __init__(self,
-                 name: str,
-                 album: SpotifyAlbum,
-                 artists: List[Artist],
+@dataclass
+class TrackFull(SimplifiedTrack):
+    album: spotframework.model.album.SimplifiedAlbum = None
+    external_ids: dict = None
+    popularity: int = None
 
-                 href: str = None,
-                 uri: Union[str, Uri] = None,
+    @property
+    def album_artists_names(self) -> str:
+        return self.album.artists_names
 
-                 disc_number: int = None,
-                 track_number: int = None,
-                 duration_ms: int = None,
-                 explicit: bool = None,
-                 is_playable: bool = None,
+    def __post_init__(self):
+        if isinstance(self.uri, str):
+            self.uri = Uri(self.uri)
 
-                 popularity: int = None,
+        if self.uri:
+            if self.uri.object_type != Uri.ObjectType.track:
+                raise TypeError('provided uri not for a track')
 
-                 audio_features: AudioFeatures = None
-                 ):
-        super().__init__(name=name, album=album, artists=artists,
-                         disc_number=disc_number,
-                         track_number=track_number,
-                         duration_ms=duration_ms,
-                         excplicit=explicit)
+        if all((isinstance(i, dict) for i in self.artists)):
+            self.artists = [spotframework.model.artist.SimplifiedArtist(**i) for i in self.artists]
 
-        self.href = href
-        if isinstance(uri, str):
-            self.uri = Uri(uri)
-        else:
-            self.uri = uri
-
-        if self.uri.object_type != Uri.ObjectType.track:
-            raise TypeError('provided uri not for a track')
-
-        self.is_playable = is_playable
-
-        self.popularity = popularity
-
-        self.audio_features = audio_features
-
-    def __repr__(self):
-        string = Color.BOLD + Color.YELLOW + 'SpotifyTrack' + Color.END + \
-               f': {self.name}, ({self.album}), {self.artists}, {self.uri}'
-
-        if self.audio_features is not None:
-            string += ' ' + repr(self.audio_features)
-
-        return string
+        if isinstance(self.album, dict):
+            self.album = spotframework.model.album.SimplifiedAlbum(**self.album)
 
     def __eq__(self, other):
-        return isinstance(other, SpotifyTrack) and other.uri == self.uri
-
-    @staticmethod
-    def wrap(uri: Uri = None,
-             name: str = None,
-             artists: Union[str, List[str]] = None,
-             album: str = None,
-             album_artists: Union[str, List[str]] = None):
-        if uri:
-            return SpotifyTrack(name=None, album=None, artists=None, uri=uri)
-        else:
-            return super().wrap(name=name, artists=artists, album=album, album_artists=album_artists)
+        return isinstance(other, TrackFull) and other.uri == self.uri
 
 
-class LibraryTrack(SpotifyTrack):
-    def __init__(self,
-                 name: str,
-                 album: SpotifyAlbum,
-                 artists: List[Artist],
+@dataclass
+class LibraryTrack:
+    added_at: datetime
+    track: TrackFull
 
-                 href: str = None,
-                 uri: Union[str, Uri] = None,
+    def __post_init__(self):
+        if isinstance(self.track, dict):
+            self.track = TrackFull(**self.track)
 
-                 disc_number: int = None,
-                 track_number: int = None,
-                 duration_ms: int = None,
-                 explicit: bool = None,
-                 is_playable: bool = None,
-
-                 popularity: int = None,
-
-                 audio_features: AudioFeatures = None,
-
-                 added_at: datetime = None
-                 ):
-        super().__init__(name=name, album=album, artists=artists,
-                         href=href,
-                         uri=uri,
-
-                         disc_number=disc_number,
-                         track_number=track_number,
-                         duration_ms=duration_ms,
-                         explicit=explicit,
-                         is_playable=is_playable,
-                         popularity=popularity,
-                         audio_features=audio_features)
-
-        self.added_at = added_at
-
-    def __repr__(self):
-        string = Color.BOLD + Color.YELLOW + 'LibraryTrack' + Color.END + \
-               f': {self.name}, ({self.album}), {self.artists}, {self.uri}, {self.added_at}'
-
-        if self.audio_features is not None:
-            string += ' ' + repr(self.audio_features)
-
-        return string
+        if isinstance(self.added_at, str):
+            self.added_at = datetime.strptime(self.added_at, '%Y-%m-%dT%H:%M:%S%z')
 
 
-class PlaylistTrack(SpotifyTrack):
-    def __init__(self,
-                 name: str,
-                 album: SpotifyAlbum,
-                 artists: List[Artist],
+@dataclass
+class PlaylistTrack:
+    added_at: datetime
+    added_by: PublicUser
+    is_local: bool
+    primary_color: str
+    track: TrackFull
+    video_thumbnail: dict
 
-                 added_at: datetime,
-                 added_by: User,
-                 is_local: bool,
+    def __post_init__(self):
+        if isinstance(self.track, dict):
+            self.track = TrackFull(**self.track)
 
-                 href: str = None,
-                 uri: Union[str, Uri] = None,
-
-                 disc_number: int = None,
-                 track_number: int = None,
-                 duration_ms: int = None,
-                 explicit: bool = None,
-                 is_playable: bool = None,
-
-                 popularity: int = None,
-
-                 audio_features: AudioFeatures = None
-                 ):
-        super().__init__(name=name, album=album, artists=artists,
-                         href=href,
-                         uri=uri,
-
-                         disc_number=disc_number,
-                         track_number=track_number,
-                         duration_ms=duration_ms,
-                         explicit=explicit,
-                         is_playable=is_playable,
-                         popularity=popularity,
-                         audio_features=audio_features)
-
-        self.added_at = added_at
-        self.added_by = added_by
-        self.is_local = is_local
-
-    def __repr__(self):
-        string = Color.BOLD + Color.YELLOW + 'PlaylistTrack' + Color.END + \
-               f': {self.name}, ({self.album}), {self.artists}, {self.uri}, {self.added_at}'
-
-        if self.audio_features is not None:
-            string += ' ' + repr(self.audio_features)
-
-        return string
+        if isinstance(self.added_at, str):
+            self.added_at = datetime.strptime(self.added_at, '%Y-%m-%dT%H:%M:%S%z')
 
 
-class PlayedTrack(SpotifyTrack):
-    def __init__(self,
-                 name: str,
-                 album: SpotifyAlbum,
-                 artists: List[Artist],
+@dataclass
+class PlayedTrack:
+    played_at: datetime
+    context: Context
+    track: SimplifiedTrack
 
-                 href: str = None,
-                 uri: Union[str, Uri] = None,
-
-                 disc_number: int = None,
-                 track_number: int = None,
-                 duration_ms: int = None,
-                 explicit: bool = None,
-                 is_playable: bool = None,
-
-                 popularity: int = None,
-
-                 audio_features: AudioFeatures = None,
-
-                 played_at: datetime = None,
-                 context: Context = None
-                 ):
-        super().__init__(name=name, album=album, artists=artists,
-                         href=href,
-                         uri=uri,
-
-                         disc_number=disc_number,
-                         duration_ms=duration_ms,
-                         track_number=track_number,
-                         explicit=explicit,
-                         is_playable=is_playable,
-                         popularity=popularity,
-                         audio_features=audio_features)
-        self.played_at = played_at
-        self.context = context
-
-    def __repr__(self):
-        string = Color.BOLD + Color.YELLOW + 'PlayedTrack' + Color.END + \
-               f': {self.name}, ({self.album}), {self.artists}, {self.uri}, {self.played_at}'
-
-        if self.audio_features is not None:
-            string += ' ' + repr(self.audio_features)
-
-        return string
+    def __post_init__(self):
+        if isinstance(self.context, dict):
+            self.context = Context(**self.context)
+        if isinstance(self.track, dict):
+            self.track = TrackFull(**self.track)
+        if isinstance(self.played_at, str):
+            self.played_at = datetime.strptime(self.played_at, '%Y-%m-%dT%H:%M:%S%z')
 
 
+@dataclass
 class AudioFeatures:
+    acousticness: float
+    analysis_url: str
+    danceability: float
+    duration_ms: int
+    energy: float
+    uri: Uri
+    instrumentalness: float
+    key: int
+    liveness: float
+    loudness: float
+    mode: AudioFeatures.Mode
+    speechiness: float
+    tempo: float
+    time_signature: int
+    track_href: str
+    valence: float
+    type: str
+    id: str
 
     class Mode(Enum):
         MINOR = 0
         MAJOR = 1
 
-    def __init__(self,
-                 acousticness: float,
-                 analysis_url: str,
-                 danceability: float,
-                 duration_ms: int,
-                 energy: float,
-                 uri: Uri,
-                 instrumentalness: float,
-                 key: int,
-                 liveness: float,
-                 loudness: float,
-                 mode: int,
-                 speechiness: float,
-                 tempo: float,
-                 time_signature: int,
-                 track_href: str,
-                 valence: float):
-        self.acousticness = self.check_float(acousticness)
-        self.analysis_url = analysis_url
-        self.danceability = self.check_float(danceability)
-        self.duration_ms = duration_ms
-        self.energy = self.check_float(energy)
-        self.uri = uri
-        self.instrumentalness = self.check_float(instrumentalness)
-        self._key = key
-        self.liveness = self.check_float(liveness)
-        self.loudness = loudness
+    def __post_init__(self):
+        self.acousticness = self.check_float(self.acousticness)
+        self.danceability = self.check_float(self.danceability)
+        self.energy = self.check_float(self.energy)
+        self.instrumentalness = self.check_float(self.instrumentalness)
+        self.liveness = self.check_float(self.liveness)
 
-        if mode == 0:
+        if self.mode == 0:
             self.mode = self.Mode.MINOR
-        elif mode == 1:
+        elif self.mode == 1:
             self.mode = self.Mode.MAJOR
         else:
             raise ValueError('illegal value for mode')
-        self.speechiness = self.check_float(speechiness)
-        self.tempo = tempo
-        self.time_signature = time_signature
-        self.track_href = track_href
-        self.valence = self.check_float(valence)
+        self.speechiness = self.check_float(self.speechiness)
+        self.valence = self.check_float(self.valence)
+
+        if isinstance(self.mode, int):
+            self.mode = AudioFeatures.Mode(self.mode)
 
     def to_dict(self):
         return {
@@ -340,7 +200,7 @@ class AudioFeatures:
         }
 
     @property
-    def key(self) -> str:
+    def key_str(self) -> str:
         legend = {
             0: 'C',
             1: 'C#',
@@ -355,21 +215,22 @@ class AudioFeatures:
             10: 'A#',
             11: 'B'
         }
-        if legend.get(self._key, None):
-            return legend.get(self._key, None)
+        if legend.get(self.key, None):
+            return legend.get(self.key, None)
         else:
             raise ValueError('key value out of bounds')
 
-    @key.setter
-    def key(self, value):
+    @key_str.setter
+    def key_str(self, value):
         if isinstance(value, int):
             if 0 <= value <= 11:
-                self._key = value
+                self.key = value
             else:
                 raise ValueError('key value out of bounds')
         else:
             raise ValueError('key value not integer')
 
+    @property
     def is_live(self):
         if self.liveness is not None:
             if self.liveness > 0.8:
@@ -379,6 +240,7 @@ class AudioFeatures:
         else:
             raise ValueError('no value for liveness')
 
+    @property
     def is_instrumental(self):
         if self.instrumentalness is not None:
             if self.instrumentalness > 0.5:
@@ -388,6 +250,7 @@ class AudioFeatures:
         else:
             raise ValueError('no value for instrumentalness')
 
+    @property
     def is_spoken_word(self):
         if self.speechiness is not None:
             if self.speechiness > 0.66:
@@ -409,10 +272,122 @@ class AudioFeatures:
         else:
             raise ValueError(f'value {value} is not float')
 
-    def __repr__(self):
-        return Color.BOLD + Color.DARKCYAN + 'AudioFeatures' + Color.END + \
-               f': acoustic:{self.acousticness}, dance:{self.danceability}, ' \
-                   f'duration:{convert_ms_to_minute_string(self.duration_ms)}, energy:{self.energy}, ' \
-                   f'instrumental:{self.instrumentalness}, key:{self.key}, live:{self.liveness}, ' \
-                   f'volume:{self.loudness}db, mode:{self.mode.name}, speech:{self.speechiness}, tempo:{self.tempo}, ' \
-                   f'time_sig:{self.time_signature}, valence:{self.valence}'
+
+@dataclass
+class Context:
+    uri: Union[str, Uri]
+    type: str = None
+    href: str = None
+    external_urls: dict = field(default_factory=dict)
+
+    def __post_init__(self):
+        if isinstance(self.uri, str):
+            self.uri = Uri(self.uri)
+        if self.uri:
+            if self.uri.object_type not in [Uri.ObjectType.album, Uri.ObjectType.artist, Uri.ObjectType.playlist]:
+                raise TypeError('context uri must be one of album, artist, playlist')
+
+    def __eq__(self, other):
+        return isinstance(other, Context) and other.uri == self.uri
+
+    def __str__(self):
+        return str(self.uri)
+
+
+@dataclass
+class Device:
+
+    class DeviceType(Enum):
+        COMPUTER = 1
+        TABLET = 2
+        SMARTPHONE = 3
+        SPEAKER = 4
+        TV = 5
+        AVR = 6
+        STB = 7
+        AUDIODONGLE = 8
+        GAMECONSOLE = 9
+        CASTVIDEO = 10
+        CASTAUDIO = 11
+        AUTOMOBILE = 12
+        UNKNOWN = 13
+
+    id: str
+    is_active: bool
+    is_private_session: bool
+    is_restricted: bool
+    name: str
+    type: DeviceType
+    volume_percent: int
+
+    def __post_init__(self):
+        if isinstance(self.type, str):
+            self.type = Device.DeviceType[self.type.upper()]
+
+    def __str__(self):
+        return self.name
+
+
+@dataclass
+class CurrentlyPlaying:
+    context: Context
+    timestamp: str
+    progress_ms: int
+    is_playing: bool
+    item: spotframework.model.track.SimplifiedTrack
+    device: Device
+    shuffle_state: bool
+    repeat_state: bool
+    currently_playing_type: str
+    actions: dict
+
+    def __post_init__(self):
+        if isinstance(self.context, Context):
+            self.context = Context(**self.context)
+
+        if isinstance(self.item, spotframework.model.track.SimplifiedTrack):
+            self.item = spotframework.model.track.SimplifiedTrack(**self.item)
+
+        if isinstance(self.device, Device):
+            self.device = Device(**self.device)
+
+    def __eq__(self, other):
+        return isinstance(other, CurrentlyPlaying) and other.item == self.item and other.context == self.context
+
+    @staticmethod
+    def _format_duration(duration):
+        total_seconds = duration / 1000
+        minutes = int((total_seconds/60) % 60)
+        seconds = int(total_seconds % 60)
+        return f'{minutes}:{seconds}'
+
+    def __str__(self):
+        if self.is_playing:
+            playing = 'playing'
+        else:
+            playing = '(paused)'
+
+        return f'{playing} {self.item} on {self.device} from {self.context} ({self._format_duration(self.progress_ms)})'
+
+
+@dataclass
+class RecommendationsSeed:
+    afterFilteringSize: int
+    afterRelinkingSize: int
+    href: str
+    id: str
+    initialPoolSize: int
+    type: str
+
+
+@dataclass
+class Recommendations:
+    seeds: List[RecommendationsSeed]
+    tracks: List[spotframework.model.track.SimplifiedTrack]
+
+    def __post_init__(self):
+        if all((isinstance(i, dict) for i in self.seeds)):
+            self.seeds = [RecommendationsSeed(**i) for i in self.seeds]
+
+        if all((isinstance(i, dict) for i in self.tracks)):
+            self.tracks = [spotframework.model.track.TrackFull(**i) for i in self.tracks]

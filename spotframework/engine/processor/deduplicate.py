@@ -1,7 +1,7 @@
 from spotframework.engine.processor.abstract import BatchSingleProcessor, BatchSingleTypeAwareProcessor
 from typing import List
 import logging
-from spotframework.model.track import Track, SpotifyTrack
+from spotframework.model.track import SimplifiedTrack, TrackFull
 from spotframework.model.uri import Uri
 
 logger = logging.getLogger(__name__)
@@ -15,10 +15,10 @@ class DeduplicateByID(BatchSingleTypeAwareProcessor):
                  append_malformed: bool = True):
         super().__init__(names=names,
                          uris=uris,
-                         instance_check=SpotifyTrack,
+                         instance_check=TrackFull,
                          append_malformed=append_malformed)
 
-    def process_batch(self, tracks: List[SpotifyTrack]) -> List[SpotifyTrack]:
+    def process_batch(self, tracks: List[TrackFull]) -> List[TrackFull]:
         return_tracks = []
 
         for track in tracks:
@@ -30,7 +30,7 @@ class DeduplicateByID(BatchSingleTypeAwareProcessor):
 
 class DeduplicateByName(BatchSingleProcessor):
 
-    def process_batch(self, tracks: List[Track]) -> List[Track]:
+    def process_batch(self, tracks: List[SimplifiedTrack]) -> List[SimplifiedTrack]:
         return_tracks = []
 
         for to_check in tracks:

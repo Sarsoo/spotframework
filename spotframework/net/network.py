@@ -2,17 +2,18 @@ import requests
 import random
 import logging
 import time
+from dataclasses import dataclass
 from typing import List, Optional, Union
 import datetime
 
-from spotframework.model.artist import SpotifyArtist
-from spotframework.model.user import User
+from spotframework.model.artist import ArtistFull
+from spotframework.model.user import PublicUser
 from . import const
 from spotframework.net.user import NetworkUser
-from spotframework.model.playlist import SpotifyPlaylist
-from spotframework.model.track import Track, SpotifyTrack, PlaylistTrack, PlayedTrack, LibraryTrack, AudioFeatures
-from spotframework.model.album import LibraryAlbum, SpotifyAlbum
-from spotframework.model.service import CurrentlyPlaying, Device, Context
+from spotframework.model.playlist import SimplifiedPlaylist, FullPlaylist
+from spotframework.model.track import SimplifiedTrack, TrackFull, PlaylistTrack, PlayedTrack, LibraryTrack, \
+    AudioFeatures, Device, CurrentlyPlaying, Recommendations
+from spotframework.model.album import AlbumFull, LibraryAlbum, SimplifiedAlbum
 from spotframework.model.uri import Uri
 from requests.models import Response
 
@@ -21,16 +22,12 @@ limit = 50
 logger = logging.getLogger(__name__)
 
 
+@dataclass
 class SearchResponse:
-    def __init__(self,
-                 tracks: List[SpotifyTrack],
-                 albums: List[SpotifyAlbum],
-                 artists: List[SpotifyArtist],
-                 playlists: List[SpotifyPlaylist]):
-        self.tracks = tracks
-        self.albums = albums
-        self.artists = artists
-        self.playlists = playlists
+    tracks: List[TrackFull]
+    albums: List[SimplifiedAlbum]
+    artists: List[ArtistFull]
+    playlists: List[SimplifiedPlaylist]
 
     @property
     def all(self):
@@ -95,7 +92,7 @@ class Network:
 
             elif req.status_code == 401:
                 logger.warning(f'{method} access token expired, refreshing')
-                self.user.refresh_token()
+                self.user.refresh_access_token()
                 if self.refresh_counter < 5:
                     self.refresh_counter += 1
                     return self.get_request(method, url, params, headers)
@@ -153,7 +150,7 @@ class Network:
 
             elif req.status_code == 401:
                 logger.warning(f'{method} access token expired, refreshing')
-                self.user.refresh_token()
+                self.user.refresh_access_token()
                 if self.refresh_counter < 5:
                     self.refresh_counter += 1
                     return self.post_request(method, url, params, json, headers)
@@ -211,7 +208,7 @@ class Network:
 
             elif req.status_code == 401:
                 logger.warning(f'{method} access token expired, refreshing')
-                self.user.refresh_token()
+                self.user.refresh_access_token()
                 if self.refresh_counter < 5:
                     self.refresh_counter += 1
                     return self.put_request(method, url, params, json, headers)
@@ -232,7 +229,7 @@ class Network:
     def get_playlist(self,
                      uri: Uri = None,
                      uri_string: str = None,
-                     tracks: bool = True) -> Optional[SpotifyPlaylist]:
+                     tracks: bool = True) -> Optional[FullPlaylist]:
         """get playlist object with tracks for uri
 
         :param uri: target request uri
@@ -252,19 +249,19 @@ class Network:
         resp = self.get_request('getPlaylist', f'playlists/{uri.object_id}')
 
         if resp:
-            playlist = self.parse_playlist(resp)
+            playlist = FullPlaylist(**resp)
 
-            if tracks and resp.get('tracks'):
+            if resp.get('tracks'):
                 if 'next' in resp['tracks']:
                     logger.debug(f'paging tracks for {uri}')
 
                     track_pager = PageCollection(net=self, page=resp['tracks'])
                     track_pager.continue_iteration()
 
-                    playlist.tracks = [self.parse_track(i) for i in track_pager.items]
+                    playlist.tracks = [PlaylistTrack(**i) for i in track_pager.items]
                 else:
                     logger.debug(f'parsing {len(resp.get("tracks"))} tracks for {uri}')
-                    playlist.tracks = [self.parse_track(i) for i in resp.get('tracks', [])]
+                    playlist.tracks = [PlaylistTrack(**i) for i in resp.get('tracks', [])]
 
             return playlist
         else:
@@ -276,7 +273,7 @@ class Network:
                         name: str = 'New Playlist',
                         public: bool = True,
                         collaborative: bool = False,
-                        description: bool = None) -> Optional[SpotifyPlaylist]:
+                        description: bool = None) -> Optional[FullPlaylist]:
         """create playlist for user
 
         :param username: username for playlist creation
@@ -297,12 +294,12 @@ class Network:
         req = self.post_request('createPlaylist', f'users/{username}/playlists', json=json)
 
         if 200 <= req.status_code < 300:
-            return self.parse_playlist(req.json())
+            return FullPlaylist(**req.json())
         else:
             logger.error('error creating playlist')
             return None
 
-    def get_playlists(self, response_limit: int = None) -> Optional[List[SpotifyPlaylist]]:
+    def get_playlists(self, response_limit: int = None) -> Optional[List[FullPlaylist]]:
         """get current users playlists
 
         :param response_limit: max playlists to return
@@ -316,7 +313,7 @@ class Network:
             pager.total_limit = response_limit
         pager.iterate()
 
-        return_items = [self.parse_playlist(i) for i in pager.items]
+        return_items = [SimplifiedPlaylist(**i) for i in pager.items]
 
         if len(return_items) == 0:
             logger.error('no playlists returned')
@@ -337,7 +334,7 @@ class Network:
             pager.total_limit = response_limit
         pager.iterate()
 
-        return_items = [self.parse_album(i) for i in pager.items]
+        return_items = [LibraryAlbum(**i) for i in pager.items]
 
         if len(return_items) == 0:
             logger.error('no albums returned')
@@ -358,14 +355,14 @@ class Network:
             pager.total_limit = response_limit
         pager.iterate()
 
-        return_items = [self.parse_track(i) for i in pager.items]
+        return_items = [LibraryTrack(**i) for i in pager.items]
 
         if len(return_items) == 0:
             logger.error('no tracks returned')
 
         return return_items
 
-    def get_user_playlists(self) -> Optional[List[SpotifyPlaylist]]:
+    def get_user_playlists(self) -> Optional[List[FullPlaylist]]:
         """retrieve user owned playlists
 
         :return: List of user owned playlists if available
@@ -375,12 +372,12 @@ class Network:
 
         playlists = self.get_playlists()
 
-        if self.user.username is None:
+        if self.user.user.id is None:
             logger.debug('no user info, refreshing for filter')
             self.user.refresh_info()
 
         if playlists is not None:
-            return list(filter(lambda x: x.owner.username == self.user.username, playlists))
+            return list(filter(lambda x: x.owner.id == self.user.user.id, playlists))
         else:
             logger.error('no playlists returned to filter')
 
@@ -409,7 +406,7 @@ class Network:
             pager.total_limit = response_limit
         pager.iterate()
 
-        return_items = [self.parse_track(i) for i in pager.items]
+        return_items = [PlaylistTrack(**i) for i in pager.items]
 
         if len(return_items) == 0:
             logger.error('no tracks returned')
@@ -425,7 +422,7 @@ class Network:
         if resp:
             if len(resp['devices']) == 0:
                 logger.error('no devices returned')
-            return [self.parse_device(i) for i in resp['devices']]
+            return [Device(**i) for i in resp['devices']]
         else:
             logger.error('no devices returned')
             return None
@@ -462,7 +459,7 @@ class Network:
                 pager.total_limit = 20
             pager.continue_iteration()
 
-            return [self.parse_track(i) for i in pager.items]
+            return [PlayedTrack(**i) for i in pager.items]
         else:
             logger.error('no tracks returned')
 
@@ -473,7 +470,7 @@ class Network:
 
         resp = self.get_request('getPlayer', 'me/player')
         if resp:
-            return self.parse_currently_playing(resp)
+            return CurrentlyPlaying(**resp)
         else:
             logger.info('no player returned')
 
@@ -490,11 +487,20 @@ class Network:
         if devices:
             device = next((i for i in devices if i.name == device_name), None)
             if device:
-                return device.device_id
+                return device.id
             else:
                 logger.error(f'{device_name} not found')
         else:
             logger.error('no devices returned')
+
+    def get_current_user(self) -> Optional[PublicUser]:
+        logger.info(f"getting current user")
+
+        resp = self.get_request('getCurrentUser', 'me')
+        if resp:
+            return PublicUser(**resp)
+        else:
+            logger.info('no user returned')
 
     def change_playback_device(self, device_id: str):
         """migrate playback to different device"""
@@ -733,7 +739,7 @@ class Network:
     def get_recommendations(self,
                             tracks: List[str] = None,
                             artists: List[str] = None,
-                            response_limit=10) -> Optional[List[Track]]:
+                            response_limit=10) -> Optional[Recommendations]:
 
         logger.info(f'getting {response_limit} recommendations, '
                     f'tracks: {len(tracks) if tracks is not None else 0}, '
@@ -754,17 +760,13 @@ class Network:
         else:
             resp = self.get_request('getRecommendations', 'recommendations', params=params)
             if resp:
-                if 'tracks' in resp:
-                    return [self.parse_track(i) for i in resp['tracks']]
-                else:
-                    logger.error('no tracks returned')
-                    return None
+                return Recommendations(**resp)
             else:
                 logger.error('error getting recommendations')
                 return None
 
     def write_playlist_object(self,
-                              playlist: SpotifyPlaylist,
+                              playlist: FullPlaylist,
                               append_tracks: bool = False):
         logger.info(f'writing {playlist.name}, append tracks: {append_tracks}')
 
@@ -775,10 +777,10 @@ class Network:
             elif playlist.tracks:
                 if append_tracks:
                     self.add_playlist_tracks(playlist.uri, [i.uri for i in playlist.tracks if
-                                                            isinstance(i, SpotifyTrack)])
+                                                            isinstance(i, SimplifiedTrack)])
                 else:
                     self.replace_playlist_tracks(uri=playlist.uri, uris=[i.uri for i in playlist.tracks if
-                                                                         isinstance(i, SpotifyTrack)])
+                                                                         isinstance(i, SimplifiedTrack)])
 
             if playlist.name or playlist.collaborative or playlist.public or playlist.description:
                 self.change_playlist_details(playlist.uri,
@@ -819,7 +821,7 @@ class Network:
         else:
             logger.error('error reordering playlist')
 
-    def get_track_audio_features(self, uris: List[Uri]):
+    def get_track_audio_features(self, uris: List[Uri]) -> Optional[List[AudioFeatures]]:
         logger.info(f'getting {len(uris)} features')
 
         audio_features = []
@@ -831,13 +833,7 @@ class Network:
 
             if resp:
                 if resp.get('audio_features', None):
-
-                    for feature in resp['audio_features']:
-                        if feature is not None:
-                            audio_features.append(self.parse_audio_features(feature))
-                        else:
-                            audio_features.append(None)
-
+                    return [AudioFeatures(**i) for i in resp['audio_features']]
                 else:
                     logger.error('no audio features included')
             else:
@@ -848,10 +844,10 @@ class Network:
         else:
             logger.error('mismatched length of input and response')
 
-    def populate_track_audio_features(self, tracks=Union[SpotifyTrack, List[SpotifyTrack]]):
+    def populate_track_audio_features(self, tracks=Union[TrackFull, List[TrackFull]]):
         logger.info(f'populating {len(tracks)} features')
 
-        if isinstance(tracks, SpotifyTrack):
+        if isinstance(tracks, TrackFull):
             audio_features = self.get_track_audio_features([tracks.uri])
 
             if audio_features:
@@ -864,7 +860,7 @@ class Network:
                 logger.error(f'no audio features returned for {tracks.uri}')
 
         elif isinstance(tracks, List):
-            if all(isinstance(i, SpotifyTrack) for i in tracks):
+            if all(isinstance(i, TrackFull) for i in tracks):
                 audio_features = self.get_track_audio_features([i.uri for i in tracks])
 
                 if audio_features:
@@ -882,7 +878,7 @@ class Network:
 
     def get_tracks(self,
                    uris: List[Uri] = None,
-                   uri_strings: List[str] = None) -> List[SpotifyTrack]:
+                   uri_strings: List[str] = None) -> List[TrackFull]:
 
         if uris is None and uri_strings is None:
             raise NameError('no uris provided')
@@ -900,11 +896,11 @@ class Network:
         for chunk in chunked_uris:
             resp = self.get_request(method='getTracks', url='tracks', params={'ids': ','.join([i.object_id for i in chunk])})
             if resp:
-                tracks += [self.parse_track(i) for i in resp.get('tracks', [])]
+                tracks += [TrackFull(**i) for i in resp.get('tracks', [])]
 
         return tracks
 
-    def get_track(self, uri: Uri = None, uri_string: str = None) -> Optional[SpotifyTrack]:
+    def get_track(self, uri: Uri = None, uri_string: str = None) -> Optional[TrackFull]:
 
         if uri is None and uri_string is None:
             raise NameError('no uri provided')
@@ -918,7 +914,7 @@ class Network:
         else:
             return None
 
-    def get_albums(self, uris: List[Uri] = None, uri_strings: List[str] = None) -> List[SpotifyAlbum]:
+    def get_albums(self, uris: List[Uri] = None, uri_strings: List[str] = None) -> List[AlbumFull]:
 
         if uris is None and uri_strings is None:
             raise NameError('no uris provided')
@@ -936,11 +932,11 @@ class Network:
         for chunk in chunked_uris:
             resp = self.get_request(method='getAlbums', url='albums', params={'ids': ','.join([i.object_id for i in chunk])})
             if resp:
-                albums += [self.parse_album(i) for i in resp.get('albums', [])]
+                albums += [AlbumFull(**i) for i in resp.get('albums', [])]
 
         return albums
 
-    def get_album(self, uri: Uri = None, uri_string: str = None) -> Optional[SpotifyAlbum]:
+    def get_album(self, uri: Uri = None, uri_string: str = None) -> Optional[AlbumFull]:
 
         if uri is None and uri_string is None:
             raise NameError('no uri provided')
@@ -954,7 +950,7 @@ class Network:
         else:
             return None
 
-    def get_artists(self, uris: List[Uri] = None, uri_strings: List[str] = None) -> List[SpotifyArtist]:
+    def get_artists(self, uris: List[Uri] = None, uri_strings: List[str] = None) -> List[ArtistFull]:
 
         if uris is None and uri_strings is None:
             raise NameError('no uris provided')
@@ -972,11 +968,11 @@ class Network:
         for chunk in chunked_uris:
             resp = self.get_request(method='getArtists', url='artists', params={'ids': ','.join([i.object_id for i in chunk])})
             if resp:
-                artists += [self.parse_artist(i) for i in resp.get('artists', [])]
+                artists += [ArtistFull(**i) for i in resp.get('artists', [])]
 
         return artists
 
-    def get_artist(self, uri: Uri = None, uri_string: str = None) -> Optional[SpotifyArtist]:
+    def get_artist(self, uri: Uri = None, uri_string: str = None) -> Optional[ArtistFull]:
 
         if uri is None and uri_string is None:
             raise NameError('no uri provided')
@@ -1022,320 +1018,12 @@ class Network:
 
         resp = self.get_request(method='search', url='search', params=params)
 
-        albums = [self.parse_album(i) for i in resp.get('albums', {}).get('items', [])]
-        artists = [self.parse_artist(i) for i in resp.get('artists', {}).get('items', [])]
-        tracks = [self.parse_track(i) for i in resp.get('tracks', {}).get('items', [])]
-        playlists = [self.parse_playlist(i) for i in resp.get('playlists', {}).get('items', [])]
+        albums = [SimplifiedAlbum(**i) for i in resp.get('albums', {}).get('items', [])]
+        artists = [ArtistFull(**i) for i in resp.get('artists', {}).get('items', [])]
+        tracks = [TrackFull(**i) for i in resp.get('tracks', {}).get('items', [])]
+        playlists = [SimplifiedPlaylist(**i) for i in resp.get('playlists', {}).get('items', [])]
 
         return SearchResponse(tracks=tracks, albums=albums, artists=artists, playlists=playlists)
-
-    @staticmethod
-    def parse_artist(artist_dict) -> SpotifyArtist:
-
-        name = artist_dict.get('name', None)
-
-        href = artist_dict.get('href', None)
-        uri = artist_dict.get('uri', None)
-
-        genres = artist_dict.get('genres', None)
-        popularity = artist_dict.get('popularity', None)
-
-        if name is None:
-            raise KeyError('artist name not found')
-
-        return SpotifyArtist(name,
-                             href=href,
-                             uri=uri,
-
-                             genres=genres,
-                             popularity=popularity)
-
-    def parse_album(self, album_dict) -> Union[SpotifyAlbum, LibraryAlbum]:
-        if 'album' in album_dict:
-            album = album_dict.get('album', None)
-        else:
-            album = album_dict
-
-        name = album.get('name', None)
-        if name is None:
-            raise KeyError('album name not found')
-
-        artists = [self.parse_artist(i) for i in album.get('artists', [])]
-
-        if album.get("album_type") is not None:
-            album_type = SpotifyAlbum.Type[album.get('album_type').lower()]
-        else:
-            album_type = SpotifyAlbum.Type.single
-
-        href = album.get('href', None)
-        uri = album.get('uri', None)
-
-        genres = album.get('genres', None)
-        if album.get('tracks'):
-            if 'next' in album['tracks']:
-
-                track_pager = PageCollection(net=self, page=album['tracks'])
-                track_pager.continue_iteration()
-
-                tracks = [self.parse_track(i) for i in track_pager.items]
-            else:
-                tracks = [self.parse_track(i) for i in album.get('tracks', [])]
-        else:
-            tracks = []
-
-        release_date = album.get('release_date', None)
-        release_date_precision = album.get('release_date_precision', None)
-
-        label = album.get('label', None)
-        popularity = album.get('popularity', None)
-
-        added_at = album_dict.get('added_at', None)
-        if added_at:
-            added_at = datetime.datetime.strptime(added_at, '%Y-%m-%dT%H:%M:%S%z')
-
-        if added_at:
-            return LibraryAlbum(name=name,
-                                artists=artists,
-
-                                album_type=album_type,
-
-                                href=href,
-                                uri=uri,
-
-                                genres=genres,
-                                tracks=tracks,
-
-                                release_date=release_date,
-                                release_date_precision=release_date_precision,
-
-                                label=label,
-                                popularity=popularity,
-
-                                added_at=added_at)
-        else:
-            return SpotifyAlbum(name=name,
-                                artists=artists,
-
-                                album_type=album_type,
-
-                                href=href,
-                                uri=uri,
-
-                                genres=genres,
-                                tracks=tracks,
-
-                                release_date=release_date,
-                                release_date_precision=release_date_precision,
-
-                                label=label,
-                                popularity=popularity)
-
-    def parse_track(self, track_dict) -> Union[Track, SpotifyTrack, PlaylistTrack, PlayedTrack, LibraryTrack]:
-
-        if 'track' in track_dict:
-            track = track_dict.get('track', None)
-        else:
-            track = track_dict
-
-        name = track.get('name', None)
-        if name is None:
-            raise KeyError('track name not found')
-
-        if track.get('album', None):
-            album = self.parse_album(track['album'])
-        else:
-            album = None
-
-        artists = [self.parse_artist(i) for i in track.get('artists', [])]
-
-        href = track.get('href', None)
-        uri = track.get('uri', None)
-
-        disc_number = track.get('disc_number', None)
-        track_number = track.get('track_number', None)
-        duration_ms = track.get('duration_ms', None)
-        explicit = track.get('explicit', None)
-        is_playable = track.get('is_playable', None)
-
-        popularity = track.get('popularity', None)
-
-        added_by = self.parse_user(track_dict.get('added_by')) if track_dict.get('added_by', None) else None
-        added_at = track_dict.get('added_at', None)
-        if added_at:
-            added_at = datetime.datetime.strptime(added_at, '%Y-%m-%dT%H:%M:%S%z')
-        is_local = track_dict.get('is_local', None)
-
-        played_at = track_dict.get('played_at', None)
-        if played_at:
-            played_at = datetime.datetime.strptime(played_at, '%Y-%m-%dT%H:%M:%S.%f%z')
-        context = track_dict.get('context', None)
-        if context:
-            context = self.parse_context(context)
-
-        if added_by or is_local:
-            return PlaylistTrack(name=name,
-                                 album=album,
-                                 artists=artists,
-
-                                 added_at=added_at,
-                                 added_by=added_by,
-                                 is_local=is_local,
-
-                                 href=href,
-                                 uri=uri,
-
-                                 disc_number=disc_number,
-                                 track_number=track_number,
-                                 duration_ms=duration_ms,
-                                 explicit=explicit,
-                                 is_playable=is_playable,
-
-                                 popularity=popularity)
-        elif added_at:
-            return LibraryTrack(name=name,
-                                album=album,
-                                artists=artists,
-
-                                href=href,
-                                uri=uri,
-
-                                disc_number=disc_number,
-                                track_number=track_number,
-                                duration_ms=duration_ms,
-                                explicit=explicit,
-                                is_playable=is_playable,
-
-                                popularity=popularity,
-                                added_at=added_at)
-        elif played_at or context:
-            return PlayedTrack(name=name,
-                               album=album,
-                               artists=artists,
-
-                               href=href,
-                               uri=uri,
-
-                               disc_number=disc_number,
-                               track_number=track_number,
-                               duration_ms=duration_ms,
-                               explicit=explicit,
-                               is_playable=is_playable,
-
-                               popularity=popularity,
-                               played_at=played_at,
-                               context=context)
-        else:
-            return SpotifyTrack(name=name,
-                                album=album,
-                                artists=artists,
-
-                                href=href,
-                                uri=uri,
-
-                                disc_number=disc_number,
-                                track_number=track_number,
-                                duration_ms=duration_ms,
-                                explicit=explicit,
-                                is_playable=is_playable,
-
-                                popularity=popularity)
-
-    @staticmethod
-    def parse_user(user_dict) -> User:
-        display_name = user_dict.get('display_name', None)
-
-        spotify_id = user_dict.get('id', None)
-        href = user_dict.get('href', None)
-        uri = user_dict.get('uri', None)
-
-        return User(spotify_id,
-                    href=href,
-                    uri=uri,
-                    display_name=display_name)
-
-    def parse_playlist(self, playlist_dict) -> SpotifyPlaylist:
-
-        collaborative = playlist_dict.get('collaborative', None)
-
-        ext_spotify = None
-        if playlist_dict.get('external_urls', None):
-            if playlist_dict['external_urls'].get('spotify', None):
-                ext_spotify = playlist_dict['external_urls']['spotify']
-
-        href = playlist_dict.get('href', None)
-        description = playlist_dict.get('description', None)
-
-        name = playlist_dict.get('name', None)
-
-        if playlist_dict.get('owner', None):
-            owner = self.parse_user(playlist_dict.get('owner'))
-        else:
-            owner = None
-
-        public = playlist_dict.get('public', None)
-        uri = playlist_dict.get('uri', None)
-
-        images = playlist_dict.get('images', [])
-        images.sort(key=lambda x: x.get('height', 0))
-        images = [i.get('url') for i in images]
-
-        return SpotifyPlaylist(uri=uri,
-                               name=name,
-                               owner=owner,
-                               description=description,
-                               href=href,
-                               collaborative=collaborative,
-                               public=public,
-                               ext_spotify=ext_spotify,
-                               images=images)
-
-    @staticmethod
-    def parse_context(context_dict) -> Context:
-        return Context(object_type=context_dict['type'],
-                       href=context_dict['href'],
-                       external_spot=context_dict['external_urls']['spotify'],
-                       uri=context_dict['uri'])
-
-    def parse_currently_playing(self, play_dict) -> CurrentlyPlaying:
-        return CurrentlyPlaying(
-            context=self.parse_context(play_dict['context']) if play_dict['context'] is not None else None,
-            timestamp=datetime.datetime.fromtimestamp(play_dict['timestamp'] / 1000),
-            progress_ms=play_dict['progress_ms'],
-            is_playing=play_dict['is_playing'],
-            track=self.parse_track(play_dict['item']),
-            device=self.parse_device(play_dict['device']),
-            shuffle=play_dict['shuffle_state'],
-            repeat=play_dict['repeat_state'],
-            currently_playing_type=play_dict['currently_playing_type'])
-
-    @staticmethod
-    def parse_device(device_dict) -> Device:
-        return Device(device_id=device_dict['id'],
-                      is_active=device_dict['is_active'],
-                      is_private_session=device_dict['is_private_session'],
-                      is_restricted=device_dict['is_restricted'],
-                      name=device_dict['name'],
-                      object_type=Device.DeviceType[device_dict['type'].upper()],
-                      volume=device_dict['volume_percent'])
-
-    @staticmethod
-    def parse_audio_features(feature_dict) -> AudioFeatures:
-        return AudioFeatures(acousticness=feature_dict['acousticness'],
-                             analysis_url=feature_dict['analysis_url'],
-                             danceability=feature_dict['danceability'],
-                             duration_ms=feature_dict['duration_ms'],
-                             energy=feature_dict['energy'],
-                             uri=Uri(feature_dict['uri']),
-                             instrumentalness=feature_dict['instrumentalness'],
-                             key=feature_dict['key'],
-                             liveness=feature_dict['liveness'],
-                             loudness=feature_dict['loudness'],
-                             mode=feature_dict['mode'],
-                             speechiness=feature_dict['speechiness'],
-                             tempo=feature_dict['tempo'],
-                             time_signature=feature_dict['time_signature'],
-                             track_href=feature_dict['track_href'],
-                             valence=feature_dict['valence'])
 
     @staticmethod
     def chunk(l, n):

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List
-from spotframework.model.track import Track
+from spotframework.model.track import SimplifiedTrack
 from spotframework.model.uri import Uri
 
 
@@ -19,20 +19,20 @@ class AbstractProcessor(ABC):
             return False
 
     @abstractmethod
-    def process(self, tracks: List[Track]) -> List[Track]:
+    def process(self, tracks: List[SimplifiedTrack]) -> List[SimplifiedTrack]:
         pass
 
 
 class BatchSingleProcessor(AbstractProcessor, ABC):
 
     @staticmethod
-    def process_single(track: Track) -> Track:
+    def process_single(track: SimplifiedTrack) -> SimplifiedTrack:
         return track
 
-    def process_batch(self, tracks: List[Track]) -> List[Track]:
+    def process_batch(self, tracks: List[SimplifiedTrack]) -> List[SimplifiedTrack]:
         return [self.process_single(track) for track in tracks]
 
-    def process(self, tracks: List[Track]) -> List[Track]:
+    def process(self, tracks: List[SimplifiedTrack]) -> List[SimplifiedTrack]:
         return [i for i in self.process_batch(tracks) if i is not None]
 
 
@@ -50,7 +50,7 @@ class BatchSingleTypeAwareProcessor(BatchSingleProcessor, ABC):
             self.instance_check = [instance_check]
         self.append_malformed = append_malformed
 
-    def process(self, tracks: List[Track]) -> List[Track]:
+    def process(self, tracks: List[SimplifiedTrack]) -> List[SimplifiedTrack]:
 
         if self.instance_check:
             return_tracks = []

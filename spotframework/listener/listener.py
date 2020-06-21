@@ -1,4 +1,4 @@
-from spotframework.model.service import CurrentlyPlaying
+from spotframework.model.track import CurrentlyPlaying
 from spotframework.net.network import Network
 
 from typing import Optional

@@ -1,23 +1,60 @@
 from __future__ import annotations
-from datetime import datetime
 from enum import Enum
-from typing import TYPE_CHECKING
+from dataclasses import dataclass
+from datetime import datetime
 from typing import List, Union
-from spotframework.util.console import Color
 from spotframework.model.uri import Uri
-if TYPE_CHECKING:
-    from spotframework.model.artist import Artist
-    from spotframework.model.track import Track
+import spotframework.model.artist
+import spotframework.model.service
+import spotframework.model.track
 
 
-class Album:
-    def __init__(self, name: str, artists: List[Artist], tracks: List[Track] = None):
-        self.name = name
-        self.artists = artists
-        if tracks is not None:
-            self.tracks = tracks
-        else:
-            self.tracks = []
+@dataclass
+class SimplifiedAlbum:
+    class Type(Enum):
+        single = 0
+        compilation = 1
+        album = 2
+
+    album_type: SimplifiedAlbum.Type
+    artists: List[spotframework.model.artist.SimplifiedArtist]
+    available_markets: List[str]
+    external_urls: dict
+    href: str
+    id: str
+    images: List[spotframework.model.service.Image]
+    name: str
+    release_date: datetime
+    release_date_precision: str
+    type: str
+    uri: Union[str, Uri]
+    total_tracks: int = None
+
+    def __post_init__(self):
+
+        if isinstance(self.album_type, str):
+            self.album_type = SimplifiedAlbum.Type[self.album_type.strip().lower()]
+
+        if isinstance(self.uri, str):
+            self.uri = Uri(self.uri)
+
+        if self.uri:
+            if self.uri.object_type != Uri.ObjectType.album:
+                raise TypeError('provided uri not for an album')
+
+        if all((isinstance(i, dict) for i in self.artists)):
+            self.artists = [spotframework.model.artist.SimplifiedArtist(**i) for i in self.artists]
+
+        if all((isinstance(i, dict) for i in self.images)):
+            self.images = [spotframework.model.service.Image(**i) for i in self.images]
+
+        if isinstance(self.release_date, str):
+            if self.release_date_precision == 'year':
+                self.release_date = datetime.strptime(self.release_date, '%Y')
+            elif self.release_date_precision == 'month':
+                self.release_date = datetime.strptime(self.release_date, '%Y-%m')
+            elif self.release_date_precision == 'day':
+                self.release_date = datetime.strptime(self.release_date, '%Y-%m-%d')
 
     @property
     def artists_names(self) -> str:
@@ -32,110 +69,56 @@ class Album:
 
         return f'{self.name} / {artists}'
 
-    def __repr__(self):
-        return Color.DARKCYAN + Color.BOLD + 'Album' + Color.END + \
-               f': {self.name}, [{self.artists}]'
 
-    def __len__(self):
-        return len(self.tracks)
+@dataclass
+class AlbumFull(SimplifiedAlbum):
 
-    @staticmethod
-    def wrap(name: str = None,
-             artists: Union[str, List[str]] = None):
-        return Album(name=name, artists=[Artist(i) for i in artists])
+    copyrights: List[dict] = None
+    external_ids: dict = None
+    genres: List[str] = None
 
+    label: str = None
+    popularity: int = None
+    tracks: List[spotframework.model.track.SimplifiedTrack] = None
 
-class SpotifyAlbum(Album):
+    def __post_init__(self):
 
-    class Type(Enum):
-        single = 0
-        compilation = 1
-        album = 2
+        if isinstance(self.album_type, str):
+            self.album_type = SimplifiedAlbum.Type[self.album_type]
 
-    def __init__(self,
-                 name: str,
-                 artists: List[Artist],
-                 album_type: Type,
-
-                 href: str = None,
-                 uri: Union[str, Uri] = None,
-
-                 genres: List[str] = None,
-                 tracks: List[Track] = None,
-
-                 release_date: str = None,
-                 release_date_precision: str = None,
-
-                 label: str = None,
-                 popularity: int = None
-                 ):
-        super().__init__(name, artists, tracks=tracks)
-
-        self.href = href
-        if isinstance(uri, str):
-            self.uri = Uri(uri)
-        else:
-            self.uri = uri
+        if isinstance(self.uri, str):
+            self.uri = Uri(self.uri)
 
         if self.uri:
             if self.uri.object_type != Uri.ObjectType.album:
                 raise TypeError('provided uri not for an album')
 
-        self.album_type = album_type
+        if all((isinstance(i, dict) for i in self.artists)):
+            self.artists = [spotframework.model.artist.SimplifiedArtist(**i) for i in self.artists]
 
-        self.genres = genres
+        if all((isinstance(i, dict) for i in self.images)):
+            self.images = [spotframework.model.service.Image(**i) for i in self.images]
 
-        self.release_date = release_date
-        self.release_date_precision = release_date_precision
+        if all((isinstance(i, dict) for i in self.tracks)):
+            self.tracks = [spotframework.model.track.SimplifiedTrack(**i) for i in self.tracks]
 
-        self.label = label
-        self.popularity = popularity
-
-    def __repr__(self):
-        return Color.DARKCYAN + Color.BOLD + 'SpotifyAlbum' + Color.END + \
-               f': {self.name}, {self.artists}, {self.uri}, {self.tracks}'
-
-    @staticmethod
-    def wrap(uri: Uri = None,
-             name: str = None,
-             artists: Union[str, List[str]] = None):
-
-        if uri:
-            return SpotifyAlbum(name=None, artists=None, uri=uri)
-        else:
-            return super().wrap(name=name, artists=artists)
+        if isinstance(self.release_date, str):
+            if self.release_date_precision == 'year':
+                self.release_date = datetime.strptime(self.release_date, '%Y')
+            elif self.release_date_precision == 'month':
+                self.release_date = datetime.strptime(self.release_date, '%Y-%m')
+            elif self.release_date_precision == 'day':
+                self.release_date = datetime.strptime(self.release_date, '%Y-%m-%d')
 
 
-class LibraryAlbum(SpotifyAlbum):
-    def __init__(self,
-                 name: str,
-                 artists: List[Artist],
+@dataclass
+class LibraryAlbum:
+    added_at: datetime
+    album: AlbumFull
 
-                 album_type: SpotifyAlbum.Type,
+    def __post_init__(self):
+        if isinstance(self.album, dict):
+            self.album = AlbumFull(**self.album)
 
-                 href: str = None,
-                 uri: Union[str, Uri] = None,
-
-                 genres: List[str] = None,
-                 tracks: List = None,
-
-                 release_date: str = None,
-                 release_date_precision: str = None,
-
-                 label: str = None,
-                 popularity: int = None,
-
-                 added_at: datetime = None
-                 ):
-        super().__init__(name=name,
-                         artists=artists,
-                         album_type=album_type,
-                         href=href,
-                         uri=uri,
-                         genres=genres,
-                         tracks=tracks,
-                         release_date=release_date,
-                         release_date_precision=release_date_precision,
-                         label=label,
-                         popularity=popularity)
-        self.added_at = added_at
+        if isinstance(self.added_at, str):
+            self.added_at = datetime.strptime(self.added_at, '%Y-%m-%dT%H:%M:%S%z')

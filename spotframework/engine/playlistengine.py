@@ -6,8 +6,8 @@ import spotframework.util.monthstrings as monthstrings
 from spotframework.engine.processor.added import AddedSince
 
 from typing import List, Optional
-from spotframework.model.track import SpotifyTrack
-from spotframework.model.playlist import SpotifyPlaylist
+from spotframework.model.track import TrackFull
+from spotframework.model.playlist import FullPlaylist
 from spotframework.model.uri import Uri
 from spotframework.net.network import Network
 from spotframework.engine.processor.abstract import AbstractProcessor
@@ -47,7 +47,7 @@ class PlaylistEngine:
 
     def make_playlist(self,
                       params: List[SourceParameter],
-                      processors: List[AbstractProcessor] = None) -> List[SpotifyTrack]:
+                      processors: List[AbstractProcessor] = None) -> List[TrackFull]:
 
         tracks = []
 
@@ -77,7 +77,7 @@ class PlaylistEngine:
                             boundary_date: datetime,
                             processors: List[AbstractProcessor] = None,
                             add_this_month: bool = False,
-                            add_last_month: bool = False) -> List[SpotifyTrack]:
+                            add_last_month: bool = False) -> List[TrackFull]:
         if processors is None:
             processors = []
 
@@ -151,7 +151,7 @@ class PlaylistEngine:
             tracks_to_sort.remove(counter_track)
 
     def execute_playlist(self,
-                         tracks: List[SpotifyTrack],
+                         tracks: List[TrackFull],
                          uri: Uri) -> Optional[Response]:
 
         resp = self.net.replace_playlist_tracks(uri=uri, uris=[i.uri for i in tracks])
@@ -197,7 +197,7 @@ class TrackSource(ABC):
         self.loaded = True
 
     @abstractmethod
-    def process(self, params: SourceParameter) -> List[SpotifyTrack]:
+    def process(self, params: SourceParameter) -> List[TrackFull]:
         pass
 
 
@@ -227,7 +227,7 @@ class PlaylistSource(TrackSource):
             logger.error('error getting playlists')
 
     def get_playlist_tracks(self,
-                            playlist: SpotifyPlaylist) -> None:
+                            playlist: FullPlaylist) -> None:
         logger.info(f"pulling tracks for {playlist.name}")
 
         tracks = self.net.get_playlist_tracks(playlist.uri)
@@ -247,7 +247,7 @@ class PlaylistSource(TrackSource):
 
         super().load()
 
-    def process(self, params: Params) -> List[SpotifyTrack]:
+    def process(self, params: Params) -> List[TrackFull]:
 
         playlists = []
 
@@ -313,7 +313,7 @@ class LibraryTrackSource(TrackSource):
 
         super().load()
 
-    def process(self, params: SourceParameter) -> List[SpotifyTrack]:
+    def process(self, params: SourceParameter) -> List[TrackFull]:
 
         tracks = copy.deepcopy(self.tracks)
 

@@ -1,7 +1,7 @@
 from abc import ABC
 from .abstract import AbstractProcessor, BatchSingleTypeAwareProcessor
 from typing import List
-from spotframework.model.track import Track, PlaylistTrack
+from spotframework.model.track import SimplifiedTrack, PlaylistTrack
 from spotframework.model.uri import Uri
 
 
@@ -16,7 +16,7 @@ class BasicReversibleSort(AbstractProcessor, ABC):
 
 class SortReleaseDate(BasicReversibleSort):
 
-    def process(self, tracks: List[Track]) -> List[Track]:
+    def process(self, tracks: List[SimplifiedTrack]) -> List[SimplifiedTrack]:
         tracks.sort(key=lambda x: (x.artists[0].name.lower(),
                                    x.album.name.lower(),
                                    x.track_number))
@@ -26,7 +26,7 @@ class SortReleaseDate(BasicReversibleSort):
 
 class SortArtistName(BasicReversibleSort):
 
-    def process(self, tracks: List[Track]) -> List[Track]:
+    def process(self, tracks: List[SimplifiedTrack]) -> List[SimplifiedTrack]:
         tracks.sort(key=lambda x: (x.album.name.lower(),
                                    x.track_number))
         tracks.sort(key=lambda x: x.artists[0].name.lower(), reverse=self.reverse)

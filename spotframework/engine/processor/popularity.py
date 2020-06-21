@@ -1,6 +1,6 @@
 from spotframework.engine.processor.abstract import BatchSingleTypeAwareProcessor
 from typing import List
-from spotframework.model.track import SpotifyTrack
+from spotframework.model.track import TrackFull
 from spotframework.model.uri import Uri
 
 
@@ -13,10 +13,10 @@ class SortPopularity(BatchSingleTypeAwareProcessor):
                  reverse: bool = False):
         super().__init__(names=names,
                          uris=uris,
-                         instance_check=SpotifyTrack,
+                         instance_check=TrackFull,
                          append_malformed=append_malformed)
         self.reverse = reverse
 
-    def process_batch(self, tracks: List[SpotifyTrack]) -> List[SpotifyTrack]:
+    def process_batch(self, tracks: List[TrackFull]) -> List[TrackFull]:
         tracks.sort(key=lambda x: x.popularity, reverse=self.reverse)
         return tracks

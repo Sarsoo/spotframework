@@ -1,37 +1,34 @@
 from __future__ import annotations
 import requests
-from spotframework.model.user import User
+from spotframework.model.user import PublicUser
 from spotframework.util.console import Color
+from dataclasses import dataclass, field
 from base64 import b64encode
 import logging
 import time
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
 
-class NetworkUser(User):
+@dataclass
+class NetworkUser:
 
-    def __init__(self, client_id, client_secret, refresh_token, access_token=None):
-        super().__init__(None)
+    access_token: str
+    refresh_token: str
 
-        self.access_token = access_token
-        self.refresh_token = refresh_token
+    client_id: str
+    client_secret: str
 
-        self.client_id = client_id
-        self.client_secret = client_secret
+    user: PublicUser = field(default=None, init=False)
 
-        self.last_refreshed = None
-        self.token_expiry = None
+    last_refreshed: datetime = field(default=None, init=False)
+    token_expiry: datetime = field(default=None, init=False)
 
-        self.on_refresh = []
+    on_refresh: List = field(default_factory=list, init=False)
 
-        self.refresh_counter = 0
-
-    def __repr__(self):
-        return Color.RED + Color.BOLD + 'NetworkUser' + Color.END + \
-               f': {self.username}, {self.display_name}, {self.uri}'
+    refresh_counter: int = field(default=0, init=False)
 
     def refresh_access_token(self) -> NetworkUser:
 
@@ -70,7 +67,7 @@ class NetworkUser(User):
                 if retry_after:
                     logger.warning(f'rate limit reached: retrying in {retry_after} seconds')
                     time.sleep(int(retry_after) + 1)
-                    return self.refresh_token()
+                    return self.refresh_access_token()
                 else:
                     logger.error('rate limit reached: cannot find Retry-After header')
 
@@ -82,23 +79,7 @@ class NetworkUser(User):
         return self
 
     def refresh_info(self) -> None:
-        info = self.get_info()
-
-        if info.get('display_name', None):
-            self.display_name = info['display_name']
-
-        if info.get('external_urls', None):
-            if info['external_urls'].get('spotify', None):
-                self.ext_spotify = info['external_urls']['spotify']
-
-        if info.get('href', None):
-            self.href = info['href']
-
-        if info.get('id', None):
-            self.username = info['id']
-
-        if info.get('uri', None):
-            self.uri = info['uri']
+        self.user = PublicUser(**self.get_info())
 
     def get_info(self) -> Optional[dict]:
         
@@ -123,7 +104,7 @@ class NetworkUser(User):
 
             elif req.status_code == 401:
                 logger.warning('access token expired, refreshing')
-                self.refresh_token()
+                self.refresh_access_token()
                 if self.refresh_counter < 5:
                     self.refresh_counter += 1
                     return self.get_info()

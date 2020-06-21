@@ -1,51 +1,43 @@
+from dataclasses import dataclass
 from typing import List, Union
-from spotframework.util.console import Color
 from spotframework.model.uri import Uri
+from spotframework.model.service import Image
 
 
-class Artist:
-    def __init__(self, name: str):
-        self.name = name
+@dataclass
+class SimplifiedArtist:
+    name: str
+    external_urls: dict
+    href: str
+    id: str
+    uri: Union[str, Uri]
+    type: str
 
-    def __str__(self):
-        return f'{self.name}'
-
-    def __repr__(self):
-        return Color.PURPLE + Color.BOLD + 'Artist' + Color.END + \
-               f': {self.name}'
-
-
-class SpotifyArtist(Artist):
-    def __init__(self,
-                 name: str,
-
-                 href: str = None,
-                 uri: Union[str, Uri] = None,
-
-                 genres: List[str] = None,
-
-                 popularity: int = None
-                 ):
-        super().__init__(name)
-
-        self.href = href
-        if isinstance(uri, str):
-            self.uri = Uri(uri)
-        else:
-            self.uri = uri
+    def __post_init__(self):
+        if isinstance(self.uri, str):
+            self.uri = Uri(self.uri)
 
         if self.uri:
             if self.uri.object_type != Uri.ObjectType.artist:
                 raise TypeError('provided uri not for an artist')
 
-        self.genres = genres
+    def __str__(self):
+        return f'{self.name}'
 
-        self.popularity = popularity
 
-    def __repr__(self):
-        return Color.PURPLE + Color.BOLD + 'SpotifyArtist' + Color.END + \
-               f': {self.name}, {self.uri}'
+@dataclass
+class ArtistFull(SimplifiedArtist):
+    genres: List[str]
+    images: List[Image]
+    popularity: int
 
-    @staticmethod
-    def wrap(uri: Uri):
-        return SpotifyArtist(name=None, uri=uri)
+    def __post_init__(self):
+        if isinstance(self.uri, str):
+            self.uri = Uri(self.uri)
+
+        if self.uri:
+            if self.uri.object_type != Uri.ObjectType.artist:
+                raise TypeError('provided uri not for an artist')
+
+        if all((isinstance(i, dict) for i in self.images)):
+            self.images = [Image(**i) for i in self.images]
