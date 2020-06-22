@@ -13,10 +13,7 @@ class AbstractProcessor(ABC):
         self.playlist_uris = uris
 
     def has_targets(self) -> bool:
-        if self.playlist_names or self.playlist_uris:
-            return True
-        else:
-            return False
+        return bool(self.playlist_names or self.playlist_uris)
 
     @abstractmethod
     def process(self, tracks: List[SimplifiedTrack]) -> List[SimplifiedTrack]:
@@ -69,5 +66,5 @@ class BatchSingleTypeAwareProcessor(BatchSingleProcessor, ABC):
                 return_tracks += malformed_tracks
 
             return return_tracks
-        else:
-            return tracks
+
+        return tracks

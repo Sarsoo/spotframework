@@ -39,7 +39,7 @@ def listen(verbose, client_id, client_secret, refresh_token):
 
     net = Network(NetworkUser(client_id=client_id,
                               client_secret=client_secret,
-                              refresh_token=refresh_token).refresh_access_token())
+                              refresh_token=refresh_token)).refresh_access_token()
     cmd = ListenCmd(net, stream_handler)
     cmd.cmdloop()
 

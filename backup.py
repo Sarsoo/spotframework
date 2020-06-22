@@ -29,10 +29,9 @@ if __name__ == '__main__':
 
     # try:
 
-    network = Network(NetworkUser(os.environ['SPOT_CLIENT'],
-                                  os.environ['SPOT_SECRET'],
-                                  os.environ['SPOT_REFRESH']))
-    network.user.refresh_access_token()
+    network = Network(NetworkUser(client_id=os.environ['SPOT_CLIENT'],
+                                  client_secret=os.environ['SPOT_SECRET'],
+                                  refresh_token=os.environ['SPOT_REFRESH'])).refresh_access_token()
     playlists = network.get_user_playlists()
 
     for playlist in playlists:

@@ -1,5 +1,5 @@
 from spotframework.model.track import CurrentlyPlaying
-from spotframework.net.network import Network
+from spotframework.net.network import Network, SpotifyNetworkException
 
 from typing import Optional
 import logging
@@ -20,31 +20,40 @@ class Listener:
 
         self.recent_tracks = []
         self.prev_now_playing: Optional[CurrentlyPlaying] = None
-        self.now_playing: Optional[CurrentlyPlaying] = net.get_player()
+        self.now_playing = None
+        try:
+            self.now_playing: Optional[CurrentlyPlaying] = net.get_player()
+        except SpotifyNetworkException as e:
+            logger.error(f'error occured retrieving currently playing - {e}')
 
         self.on_playback_change = []
 
     def update_now_playing(self):
         """update currently playing values"""
         logger.debug('updating now playing')
-        live_now_playing = self.net.get_player()
 
-        if self.now_playing is None and live_now_playing is None:
-            return
+        try:
+            live_now_playing = self.net.get_player()
+            if self.now_playing is None and live_now_playing is None:
+                return
 
-        if live_now_playing != self.now_playing:
-            self.prev_now_playing = self.now_playing
-            self.now_playing = live_now_playing
-            for func in self.on_playback_change:
-                func(live_now_playing)
-        else:
-            self.now_playing = live_now_playing
+            if live_now_playing != self.now_playing:
+                self.prev_now_playing = self.now_playing
+                self.now_playing = live_now_playing
+                for func in self.on_playback_change:
+                    func(live_now_playing)
+            else:
+                self.now_playing = live_now_playing
+
+        except SpotifyNetworkException as e:
+            logger.error(f'error occured retrieving currently playing - {e}')
 
     def update_recent_tracks(self):
         """retrieve recently played tracks and merge with previously stored"""
         logger.debug('updating recent tracks')
-        tracks = self.net.get_recently_played_tracks(response_limit=self.request_size)
-        if tracks is not None:
+
+        try:
+            tracks = self.net.get_recently_played_tracks(response_limit=self.request_size)
             for track in tracks:
                 if track.played_at not in [i.played_at for i in self.recent_tracks]:
                     self.recent_tracks.append(track)
@@ -52,5 +61,6 @@ class Listener:
             self.recent_tracks.sort(key=lambda x: x.played_at)
             if self.max_recent_tracks is not None:
                 self.recent_tracks = self.recent_tracks[-self.max_recent_tracks:]
-        else:
-            logger.error('no recent tracks returned')
+
+        except SpotifyNetworkException as e:
+            logger.error(f'error occured retrieving recent tracks - {e}')

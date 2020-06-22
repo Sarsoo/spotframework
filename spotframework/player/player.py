@@ -1,8 +1,7 @@
-from spotframework.net.network import Network
+from spotframework.net.network import Network, SpotifyNetworkException
 from spotframework.model.track import SimplifiedTrack, Context, Device
 from spotframework.model.album import AlbumFull
 from spotframework.model.playlist import FullPlaylist
-from spotframework.model.uri import Uri
 from typing import List, Union
 import logging
 logger = logging.getLogger(__name__)
@@ -23,14 +22,20 @@ class Player:
 
     @property
     def available_devices(self):
-        return self.net.get_available_devices()
+        try:
+            return self.net.get_available_devices()
+        except SpotifyNetworkException as e:
+            logger.error(f'error retrieving current devices - {e}')
 
     @property
     def status(self):
-        new_status = self.net.get_player()
-        if new_status:
-            self.last_status = new_status
-            return self.last_status
+        try:
+            new_status = self.net.get_player()
+            if new_status:
+                self.last_status = new_status
+                return self.last_status
+        except SpotifyNetworkException as e:
+            logger.error(f'error retrieving current devices - {e}')
 
     def play(self,
              context: Union[Context, AlbumFull, FullPlaylist] = None,
@@ -43,55 +48,76 @@ class Player:
             if searched_device:
                 device = searched_device
 
-        if context and (tracks or uris):
-            raise Exception('cant execute context and track list')
-        if context:
-            if device:
-                self.net.play(uri=context.uri, deviceid=device.id)
+        try:
+            if context and (tracks or uris):
+                raise Exception('cant execute context and track list')
+            if context:
+                if device:
+                    self.net.play(uri=context.uri, deviceid=device.id)
+                else:
+                    self.net.play(uri=context.uri)
+            elif tracks or uris:
+
+                if tracks is None:
+                    tracks = []
+
+                if uris is None:
+                    uris = []
+
+                if device:
+                    self.net.play(uris=[i.uri for i in tracks] + uris, deviceid=device.id)
+                else:
+                    self.net.play(uris=[i.uri for i in tracks] + uris)
             else:
-                self.net.play(uri=context.uri)
-        elif tracks or uris:
-
-            if tracks is None:
-                tracks = []
-
-            if uris is None:
-                uris = []
-
-            if device:
-                self.net.play(uris=[i.uri for i in tracks] + uris, deviceid=device.id)
-            else:
-                self.net.play(uris=[i.uri for i in tracks] + uris)
-        else:
-            self.net.play()
+                self.net.play()
+        except SpotifyNetworkException as e:
+            logger.error(f'error playing - {e}')
 
     def change_device(self, device: Device):
-        self.net.change_playback_device(device.id)
+        try:
+            self.net.change_playback_device(device.id)
+        except SpotifyNetworkException as e:
+            logger.error(f'error changing device to {device.name} - {e}')
 
     def pause(self):
-        self.net.pause()
+        try:
+            self.net.pause()
+        except SpotifyNetworkException as e:
+            logger.error(f'error pausing - {e}')
 
     def toggle_playback(self):
         status = self.status
-        if status:
-            if status.is_playing:
-                self.pause()
+        try:
+            if status:
+                if status.is_playing:
+                    self.pause()
+                else:
+                    self.play()
             else:
+                logger.warning('no current playback, playing')
                 self.play()
-        else:
-            logger.warning('no current playback, playing')
-            self.play()
+        except SpotifyNetworkException as e:
+            logger.error(f'error toggling playback - {e}')
 
     def next(self):
-        self.net.next()
+        try:
+            self.net.next()
+        except SpotifyNetworkException as e:
+            logger.error(f'error skipping track - {e}')
 
     def previous(self):
-        self.net.previous()
+        try:
+            self.net.previous()
+        except SpotifyNetworkException as e:
+            logger.error(f'error reversing track - {e}')
 
     def shuffle(self, state=None):
         if state is not None:
             if isinstance(state, bool):
-                self.net.set_shuffle(state)
+                try:
+                    self.net.set_shuffle(state)
+                except SpotifyNetworkException as e:
+                    logger.error(f'error setting shuffle - {e}')
             else:
                 raise TypeError(f'{state} is not bool')
         else:
@@ -104,9 +130,12 @@ class Player:
     def volume(self, value: int, device: Device = None):
 
         if 0 <= int(value) <= 100:
-            if device:
-                self.net.set_volume(value, deviceid=device.id)
-            else:
-                self.net.set_volume(value)
+            try:
+                if device:
+                    self.net.set_volume(value, deviceid=device.id)
+                else:
+                    self.net.set_volume(value)
+            except SpotifyNetworkException as e:
+                logger.error(f'error setting volume to {value} - {e}')
         else:
             logger.error(f'{value} not between 0 and 100')

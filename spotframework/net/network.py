@@ -2,24 +2,33 @@ import requests
 import random
 import logging
 import time
+from base64 import b64encode
 from dataclasses import dataclass
 from typing import List, Optional, Union
 import datetime
+from json import JSONDecodeError
 
 from spotframework.model.artist import ArtistFull
 from spotframework.model.user import PublicUser
-from . import const
 from spotframework.net.user import NetworkUser
 from spotframework.model.playlist import SimplifiedPlaylist, FullPlaylist
 from spotframework.model.track import SimplifiedTrack, TrackFull, PlaylistTrack, PlayedTrack, LibraryTrack, \
     AudioFeatures, Device, CurrentlyPlaying, Recommendations
 from spotframework.model.album import AlbumFull, LibraryAlbum, SimplifiedAlbum
 from spotframework.model.uri import Uri
-from requests.models import Response
 
 limit = 50
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class SpotifyNetworkException(Exception):
+    http_code: int
+    message: str = None
+
+    def __str__(self):
+        return "Spotify Network Exception: (%s) %s" % (self.http_code, self.message)
 
 
 @dataclass
@@ -37,6 +46,8 @@ class SearchResponse:
 class Network:
     """Network layer class for reading and manipulating spotify service"""
 
+    api_root = 'https://api.spotify.com/v1/'
+
     def __init__(self, user: NetworkUser):
         """Create network using NetworkUser containing credentials
 
@@ -44,192 +55,199 @@ class Network:
         """
         self.user = user
         self.refresh_counter = 0
+        self.rsession = requests.Session()
 
-    def get_request(self, method, url=None, params=None, headers=None, whole_url=None) -> Optional[dict]:
+    def net_call(self,
+                 method: str,
+                 url_path: str = None,
+                 whole_url: str = None,
+                 params: dict = None,
+                 data: dict = None,
+                 json: dict = None,
+                 headers: dict = None,
+                 auth: bool = True,
+                 **kwargs) -> Optional[dict]:
+
+        method = method.strip().upper()
+
+        if not url_path and not whole_url:
+            raise KeyError("No URL provided for request")
+
+        if whole_url:
+            url = whole_url
+        else:
+            url = Network.api_root + url_path
+
+        if not headers:
+            headers = dict()
+
+        if auth:
+            headers['Authorization'] = 'Bearer ' + self.user.access_token
+
+        if kwargs:
+            if method in ['GET', 'DELETE']:
+                if not params:
+                    params = dict()
+                params.update({i: j for i, j in kwargs.items() if j is not None})
+            elif method in ['POST', 'PUT']:
+                if not json:
+                    json = dict()
+                json.update({i: j for i, j in kwargs.items() if j is not None})
+
+        response = self.rsession.request(method=method,
+                                         url=url,
+                                         headers=headers,
+                                         params=params,
+                                         json=json,
+                                         data=data)
+
+        if 200 <= response.status_code < 300:
+            logger.debug(f'{method} {url_path or whole_url} {response.status_code}')
+
+            if response.status_code == 204:
+                return None
+
+            try:
+                return response.json()
+            except JSONDecodeError:
+                return None
+        else:
+            if response.status_code == 429:
+                retry_after = response.headers.get('Retry-After', None)
+
+                if self.refresh_counter < 5:
+                    self.refresh_counter += 1
+                    if retry_after:
+                        logger.warning(f'{method} {url_path or whole_url} rate limit reached: '
+                                       f'retrying in {retry_after} seconds')
+                        time.sleep(int(retry_after) + 1)
+                        return self.net_call(method=method,
+                                             url_path=url_path,
+                                             whole_url=whole_url,
+                                             params=params,
+                                             data=data,
+                                             json=json,
+                                             headers=headers)
+                    else:
+                        logger.error(f'{method} {url_path or whole_url} rate limit reached: '
+                                     f'cannot find Retry-After header')
+                else:
+                    self.refresh_counter = 0
+                    logger.critical(f'{method} {url_path or whole_url} refresh token limit (5) reached')
+
+            elif response.status_code == 401:
+                logger.warning(f'{method} {url_path or whole_url} access token expired, refreshing')
+                self.refresh_access_token()
+                if self.refresh_counter < 5:
+                    self.refresh_counter += 1
+                    return self.net_call(method=method,
+                                         url_path=url_path,
+                                         whole_url=whole_url,
+                                         params=params,
+                                         data=data,
+                                         json=json,
+                                         headers=headers)
+                else:
+                    self.refresh_counter = 0
+                    logger.critical(f'{method} {url_path or whole_url} refresh token limit (5) reached')
+
+            try:
+                error_json = response.json()["error"]
+                logger.error(f'{method} {response.status_code} {error_json["message"]}')
+                raise SpotifyNetworkException(http_code=response.status_code, message=error_json["message"])
+            except (KeyError, JSONDecodeError):
+                logger.error(f'{method} {response.status_code} no error object found')
+                raise SpotifyNetworkException(http_code=response.status_code, message=response.text)
+
+    def get_request(self, url=None, params=None, headers=None, whole_url=None, auth=True, **kwargs) -> Optional[dict]:
         """HTTP get request for reading from service
 
-        :param method: spotify api method for logging
         :param url: query url string following hostname and api version
         :param params: dictionary of query parameters
         :param headers: additional request headers
         :param whole_url: override base api url with new hostname and url
+        :param auth: direct bearer authentication header to be injected
         :return: dictionary of json response if available
         """
 
-        if headers is None:
-            headers = dict()
+        return self.net_call(method='GET', url_path=url, whole_url=whole_url, params=params,
+                             headers=headers, auth=auth, **kwargs)
 
-        headers['Authorization'] = 'Bearer ' + self.user.access_token
-
-        if whole_url:
-            req = requests.get(whole_url, params=params, headers=headers)
-        else:
-            req = requests.get(const.api_url + url, params=params, headers=headers)
-
-        if 200 <= req.status_code < 300:
-            logger.debug(f'{method} get {url if whole_url is not None else whole_url} {req.status_code}')
-
-            if req.status_code != 204:
-                return req.json()
-            else:
-                return None
-        else:
-
-            if req.status_code == 429:
-                retry_after = req.headers.get('Retry-After', None)
-
-                if self.refresh_counter < 5:
-                    self.refresh_counter += 1
-                    if retry_after:
-                        logger.warning(f'{method} rate limit reached: retrying in {retry_after} seconds')
-                        time.sleep(int(retry_after) + 1)
-                        return self.get_request(method, url, params, headers)
-                    else:
-                        logger.error(f'{method} rate limit reached: cannot find Retry-After header')
-                else:
-                    self.refresh_counter = 0
-                    logger.critical(f'{method} refresh token limit (5) reached')
-
-            elif req.status_code == 401:
-                logger.warning(f'{method} access token expired, refreshing')
-                self.user.refresh_access_token()
-                if self.refresh_counter < 5:
-                    self.refresh_counter += 1
-                    return self.get_request(method, url, params, headers)
-                else:
-                    self.refresh_counter = 0
-                    logger.critical(f'{method} refresh token limit (5) reached')
-
-            else:
-                error = req.json().get('error', None)
-                if error:
-                    message = error.get('message', 'n/a')
-                    logger.error(f'{method} {req.status_code} {message}')
-                else:
-                    logger.error(f'{method} {req.status_code} no error object found')
-
-        return None
-
-    def post_request(self, method, url, params=None, json=None, headers=None) -> Optional[Response]:
+    def post_request(self, url=None, params=None, json=None, data=None,
+                     headers=None, whole_url=None, auth=True, **kwargs) -> Optional[dict]:
         """HTTP post request for reading from service
 
-        :param method: spotify api method for logging
         :param url: query url string following hostname and api version
         :param params: dictionary of query parameters
         :param json: dictionary request body for conversion to json during transmission
+        :param data: dictionary request body for transmission
         :param headers: additional request headers
+        :param whole_url: override base api url with new hostname and url
+        :param auth: direct bearer authentication header to be injected
         :return: response object if available
         """
 
-        if headers is None:
-            headers = dict()
+        return self.net_call(method='POST', url_path=url, whole_url=whole_url, params=params,
+                             json=json, data=data, headers=headers, auth=auth, **kwargs)
 
-        headers['Authorization'] = 'Bearer ' + self.user.access_token
-
-        req = requests.post(const.api_url + url, params=params, json=json, headers=headers)
-
-        if 200 <= req.status_code < 300:
-            logger.debug(f'{method} post {url} {req.status_code}')
-            return req
-        else:
-
-            if req.status_code == 429:
-                retry_after = req.headers.get('Retry-After', None)
-
-                if self.refresh_counter < 5:
-                    self.refresh_counter += 1
-                    if retry_after:
-                        logger.warning(f'{method} rate limit reached: retrying in {retry_after} seconds')
-                        time.sleep(int(retry_after) + 1)
-                        return self.post_request(method, url, params, json, headers)
-                    else:
-                        logger.error(f'{method} rate limit reached: cannot find Retry-After header')
-                else:
-                    self.refresh_counter = 0
-                    logger.critical(f'{method} refresh token limit (5) reached')
-
-            elif req.status_code == 401:
-                logger.warning(f'{method} access token expired, refreshing')
-                self.user.refresh_access_token()
-                if self.refresh_counter < 5:
-                    self.refresh_counter += 1
-                    return self.post_request(method, url, params, json, headers)
-                else:
-                    self.refresh_counter = 0
-                    logger.critical(f'{method} refresh token limit (5) reached')
-
-            else:
-                error = req.json().get('error', None)
-                if error:
-                    message = error.get('message', 'n/a')
-                    logger.error(f'{method} {req.status_code} {message}')
-                else:
-                    logger.error(f'{method} {req.status_code} no error object found')
-
-        return None
-
-    def put_request(self, method, url, params=None, json=None, headers=None) -> Optional[Response]:
+    def put_request(self, url=None, params=None, json=None, data=None,
+                    headers=None, whole_url=None, auth=True, **kwargs) -> Optional[dict]:
         """HTTP put request for reading from service
 
-        :param method: spotify api method for logging
         :param url: query url string following hostname and api version
         :param params: dictionary of query parameters
         :param json: dictionary request body for conversion to json during transmission
+        :param data: dictionary request body for transmission
         :param headers: additional request headers
+        :param whole_url: override base api url with new hostname and url
+        :param auth: direct bearer authentication header to be injected
         :return: response object if available
         """
 
-        if headers is None:
-            headers = dict()
+        return self.net_call(method='PUT', url_path=url, whole_url=whole_url, params=params,
+                             json=json, data=data, headers=headers, auth=auth, **kwargs)
 
-        headers['Authorization'] = 'Bearer ' + self.user.access_token
+    def refresh_access_token(self):
+        logger.info(f'refreshing token')
 
-        req = requests.put(const.api_url + url, params=params, json=json, headers=headers)
+        if self.user.refresh_token is None:
+            raise NameError('no refresh token to query')
 
-        if 200 <= req.status_code < 300:
-            logger.debug(f'{method} put {url} {req.status_code}')
-            return req
-        else:
+        if self.user.client_id is None:
+            raise NameError('no client id')
 
-            if req.status_code == 429:
-                retry_after = req.headers.get('Retry-After', None)
+        if self.user.client_secret is None:
+            raise NameError('no client secret')
 
-                if self.refresh_counter < 5:
-                    self.refresh_counter += 1
-                    if retry_after:
-                        logger.warning(f'{method} rate limit reached: retrying in {retry_after} seconds')
-                        time.sleep(int(retry_after) + 1)
-                        return self.put_request(method, url, params, json, headers)
-                    else:
-                        logger.error(f'{method} rate limit reached: cannot find Retry-After header')
-                else:
-                    self.refresh_counter = 0
-                    logger.critical(f'{method} refresh token limit (5) reached')
+        idsecret = b64encode(bytes(self.user.client_id + ':' + self.user.client_secret, "utf-8")).decode("ascii")
+        headers = {'Authorization': 'Basic %s' % idsecret}
 
-            elif req.status_code == 401:
-                logger.warning(f'{method} access token expired, refreshing')
-                self.user.refresh_access_token()
-                if self.refresh_counter < 5:
-                    self.refresh_counter += 1
-                    return self.put_request(method, url, params, json, headers)
-                else:
-                    self.refresh_counter = 0
-                    logger.critical(f'{method} refresh token limit (5) reached')
+        try:
+            resp = self.post_request(headers=headers,
+                                     whole_url='https://accounts.spotify.com/api/token',
+                                     auth=False,
+                                     data={"grant_type": "refresh_token",
+                                           "refresh_token": self.user.refresh_token})
 
-            else:
-                error = req.json().get('error', None)
-                if error:
-                    message = error.get('message', 'n/a')
-                    logger.error(f'{method} {req.status_code} {message}')
-                else:
-                    logger.error(f'{method} {req.status_code} no error object found')
+            self.user.access_token = resp['access_token']
+            if resp.get('refresh_token', None):
+                self.user.refresh_token = resp['refresh_token']
+            self.user.token_expiry = resp['expires_in']
+            self.user.last_refreshed = datetime.datetime.utcnow()
+            for func in self.user.on_refresh:
+                func(self.user)
+        except SpotifyNetworkException as e:
+            logger.error(f'error refreshing user token - {e}')
 
-        return None
+        return self
+
+    def refresh_user_info(self):
+        self.user.user = self.get_current_user()
 
     def get_playlist(self,
                      uri: Uri = None,
                      uri_string: str = None,
-                     tracks: bool = True) -> Optional[FullPlaylist]:
+                     tracks: bool = True) -> FullPlaylist:
         """get playlist object with tracks for uri
 
         :param uri: target request uri
@@ -246,34 +264,29 @@ class Network:
 
         logger.info(f"retrieving {uri}")
 
-        resp = self.get_request('getPlaylist', f'playlists/{uri.object_id}')
+        resp = self.get_request(f'playlists/{uri.object_id}')
+        playlist = FullPlaylist(**resp)
 
-        if resp:
-            playlist = FullPlaylist(**resp)
+        if resp.get('tracks') and tracks:
+            if 'next' in resp['tracks']:
+                logger.debug(f'paging tracks for {uri}')
 
-            if resp.get('tracks'):
-                if 'next' in resp['tracks']:
-                    logger.debug(f'paging tracks for {uri}')
+                track_pager = PageCollection(net=self, page=resp['tracks'])
+                track_pager.continue_iteration()
 
-                    track_pager = PageCollection(net=self, page=resp['tracks'])
-                    track_pager.continue_iteration()
+                playlist.tracks = [PlaylistTrack(**i) for i in track_pager.items]
+            else:
+                logger.debug(f'parsing {len(resp.get("tracks"))} tracks for {uri}')
+                playlist.tracks = [PlaylistTrack(**i) for i in resp.get('tracks', [])]
 
-                    playlist.tracks = [PlaylistTrack(**i) for i in track_pager.items]
-                else:
-                    logger.debug(f'parsing {len(resp.get("tracks"))} tracks for {uri}')
-                    playlist.tracks = [PlaylistTrack(**i) for i in resp.get('tracks', [])]
-
-            return playlist
-        else:
-            logger.error('no playlist returned')
-            return None
+        return playlist
 
     def create_playlist(self,
                         username: str,
                         name: str = 'New Playlist',
                         public: bool = True,
                         collaborative: bool = False,
-                        description: bool = None) -> Optional[FullPlaylist]:
+                        description: str = None) -> FullPlaylist:
         """create playlist for user
 
         :param username: username for playlist creation
@@ -286,20 +299,18 @@ class Network:
         logger.info(f'creating {name} for {username}, '
                     f'public: {public}, collaborative: {collaborative}, description: {description}')
 
-        json = {"name": name, "public": public, "collaborative": collaborative}
+        if collaborative and public:
+            public = False
+            logger.warning(f'public collaborative playlist requested, defaulting to private {username} / {name}')
 
-        if description:
-            json['description'] = description
+        req = self.post_request(f'users/{username}/playlists',
+                                name=name,
+                                public=public,
+                                collaborative=collaborative,
+                                description=description)
+        return FullPlaylist(**req)
 
-        req = self.post_request('createPlaylist', f'users/{username}/playlists', json=json)
-
-        if 200 <= req.status_code < 300:
-            return FullPlaylist(**req.json())
-        else:
-            logger.error('error creating playlist')
-            return None
-
-    def get_playlists(self, response_limit: int = None) -> Optional[List[FullPlaylist]]:
+    def get_playlists(self, response_limit: int = None) -> Optional[List[SimplifiedPlaylist]]:
         """get current users playlists
 
         :param response_limit: max playlists to return
@@ -362,7 +373,7 @@ class Network:
 
         return return_items
 
-    def get_user_playlists(self) -> Optional[List[FullPlaylist]]:
+    def get_user_playlists(self) -> List[SimplifiedPlaylist]:
         """retrieve user owned playlists
 
         :return: List of user owned playlists if available
@@ -374,7 +385,7 @@ class Network:
 
         if self.user.user.id is None:
             logger.debug('no user info, refreshing for filter')
-            self.user.refresh_info()
+            self.refresh_user_info()
 
         if playlists is not None:
             return list(filter(lambda x: x.owner.id == self.user.user.id, playlists))
@@ -413,19 +424,16 @@ class Network:
 
         return return_items
 
-    def get_available_devices(self) -> Optional[List[Device]]:
+    def get_available_devices(self) -> List[Device]:
         """get users available devices"""
 
         logger.info("polling available devices")
 
-        resp = self.get_request('getAvailableDevices', 'me/player/devices')
-        if resp:
-            if len(resp['devices']) == 0:
-                logger.error('no devices returned')
-            return [Device(**i) for i in resp['devices']]
-        else:
+        resp = self.get_request('me/player/devices')
+
+        if len(resp['devices']) == 0:
             logger.error('no devices returned')
-            return None
+        return [Device(**i) for i in resp['devices']]
 
     def get_recently_played_tracks(self,
                                    response_limit: int = None,
@@ -449,30 +457,24 @@ class Network:
         if before:
             params['before'] = int(before.timestamp() * 1000)
 
-        resp = self.get_request('getRecentlyPlayedTracks', 'me/player/recently-played', params=params)
+        resp = self.get_request('me/player/recently-played', params=params)
 
-        if resp:
-            pager = PageCollection(self, page=resp)
-            if response_limit:
-                pager.total_limit = response_limit
-            else:
-                pager.total_limit = 20
-            pager.continue_iteration()
-
-            return [PlayedTrack(**i) for i in pager.items]
+        pager = PageCollection(self, page=resp)
+        if response_limit:
+            pager.total_limit = response_limit
         else:
-            logger.error('no tracks returned')
+            pager.total_limit = 20
+        pager.continue_iteration()
 
-    def get_player(self) -> Optional[CurrentlyPlaying]:
+        return [PlayedTrack(**i) for i in pager.items]
+
+    def get_player(self) -> CurrentlyPlaying:
         """get currently playing snapshot (player)"""
 
         logger.info("polling player")
 
-        resp = self.get_request('getPlayer', 'me/player')
-        if resp:
-            return CurrentlyPlaying(**resp)
-        else:
-            logger.info('no player returned')
+        resp = self.get_request('me/player')
+        return CurrentlyPlaying(**resp)
 
     def get_device_id(self, device_name: str) -> Optional[str]:
         """return device id of device as searched for by name
@@ -484,48 +486,29 @@ class Network:
         logger.info(f"querying {device_name}")
 
         devices = self.get_available_devices()
-        if devices:
-            device = next((i for i in devices if i.name == device_name), None)
-            if device:
-                return device.id
-            else:
-                logger.error(f'{device_name} not found')
+        device = next((i for i in devices if i.name == device_name), None)
+        if device:
+            return device.id
         else:
-            logger.error('no devices returned')
+            logger.error(f'{device_name} not found')
 
-    def get_current_user(self) -> Optional[PublicUser]:
+    def get_current_user(self) -> PublicUser:
         logger.info(f"getting current user")
 
-        resp = self.get_request('getCurrentUser', 'me')
-        if resp:
-            return PublicUser(**resp)
-        else:
-            logger.info('no user returned')
+        resp = self.get_request('me')
+        return PublicUser(**resp)
 
     def change_playback_device(self, device_id: str):
         """migrate playback to different device"""
-
-        logger.info(device_id)
-
-        json = {
-            'device_ids': [device_id],
-            'play': True
-        }
-
         logger.info(f'shifting playback to {device_id}')
-
-        resp = self.put_request('changePlaybackDevice', 'me/player', json=json)
-        if resp:
-            return True
-        else:
-            return None
+        self.put_request('me/player', device_ids=[device_id], play=True)
 
     def play(self,
              uri: Uri = None,
              uri_string: str = None,
              uris: List[Uri] = None,
              uri_strings: List[str] = None,
-             deviceid: str = None) -> Optional[Response]:
+             deviceid: str = None):
         """begin playback"""
 
         if uri_string is not None:
@@ -551,45 +534,33 @@ class Network:
         if uris:
             payload['uris'] = [str(i) for i in uris[:200]]
 
-        req = self.put_request('play', 'me/player/play', params=params, json=payload)
-        if req:
-            return req
-        else:
-            logger.error('error playing')
+        self.put_request('me/player/play', params=params, json=payload)
 
-    def pause(self, deviceid: str = None) -> Optional[Response]:
+    def pause(self, deviceid: str = None):
         """pause playback"""
 
-        logger.info(f"{deviceid if deviceid is not None else ''}")
+        logger.info(f"{deviceid or ''}")
 
         if deviceid is not None:
             params = {'device_id': deviceid}
         else:
             params = None
 
-        req = self.put_request('pause', 'me/player/pause', params=params)
-        if req:
-            return req
-        else:
-            logger.error('error pausing')
+        self.put_request('me/player/pause', params=params)
 
-    def next(self, deviceid: str = None) -> Optional[Response]:
+    def next(self, deviceid: str = None):
         """skip track playback"""
 
-        logger.info(f"{deviceid if deviceid is not None else ''}")
+        logger.info(f"{deviceid or ''}")
 
         if deviceid is not None:
             params = {'device_id': deviceid}
         else:
             params = None
 
-        req = self.post_request('next', 'me/player/next', params=params)
-        if req:
-            return req
-        else:
-            logger.error('error skipping')
+        self.post_request('me/player/next', params=params)
 
-    def previous(self, deviceid: str = None) -> Optional[Response]:
+    def previous(self, deviceid: str = None):
         """skip playback backwards"""
 
         logger.info(f"{deviceid if deviceid is not None else ''}")
@@ -599,13 +570,9 @@ class Network:
         else:
             params = None
 
-        req = self.post_request('previous', 'me/player/previous', params=params)
-        if req:
-            return req
-        else:
-            logger.error('error reversing')
+        self.post_request('me/player/previous', params=params)
 
-    def set_shuffle(self, state: bool, deviceid: str = None) -> Optional[Response]:
+    def set_shuffle(self, state: bool, deviceid: str = None):
 
         logger.info(f"{state}{' ' + deviceid if deviceid is not None else ''}")
 
@@ -614,39 +581,28 @@ class Network:
         if deviceid is not None:
             params['device_id'] = deviceid
 
-        req = self.put_request('setShuffle', 'me/player/shuffle', params=params)
-        if req:
-            return req
-        else:
-            logger.error(f'error setting shuffle {state}')
+        return self.put_request('me/player/shuffle', params=params)
 
-    def set_volume(self, volume: int, deviceid: str = None) -> Optional[Response]:
+    def set_volume(self, volume: int, deviceid: str = None):
 
         logger.info(f"{volume}{' ' + deviceid if deviceid is not None else ''}")
 
         if 0 <= int(volume) <= 100:
 
             params = {'volume_percent': volume}
-
             if deviceid is not None:
                 params['device_id'] = deviceid
 
-            req = self.put_request('setVolume', 'me/player/volume', params=params)
-            if req:
-                return req
-            else:
-                logger.error(f'error setting volume {volume}')
-                return None
+            self.put_request('me/player/volume', params=params)
 
         else:
             logger.error(f"{volume} not accepted value")
-            return None
 
     def replace_playlist_tracks(self,
                                 uri: Uri = None,
                                 uri_string: str = None,
                                 uris: List[Uri] = None,
-                                uri_strings: List[str] = None):
+                                uri_strings: List[str] = None) -> Optional[List[str]]:
 
         if uri_string is not None:
             uri = Uri(uri_string)
@@ -656,85 +612,43 @@ class Network:
 
         logger.info(f"replacing {uri} with {'0' if uris is None else len(uris)} tracks")
 
-        headers = {"Content-Type": "application/json"}
+        self.put_request(f'playlists/{uri.object_id}/tracks', uris=[str(i) for i in uris[:100]])
 
-        json = {"uris": [str(i) for i in uris[:100]]}
-
-        req = self.put_request('replacePlaylistTracks', f'playlists/{uri.object_id}/tracks',
-                               json=json, headers=headers)
-
-        if req is not None:
-
-            if len(uris) > 100:
-                return self.add_playlist_tracks(uri, uris[100:])
-
-            return req
-        else:
-            logger.error(f'error replacing playlist tracks, total: {len(uris)}')
+        if len(uris) > 100:
+            return self.add_playlist_tracks(uri, uris[100:])
 
     def change_playlist_details(self,
                                 uri: Uri,
                                 name: str = None,
                                 public: bool = None,
                                 collaborative: bool = None,
-                                description: str = None) -> Optional[Response]:
+                                description: str = None):
 
         logger.info(f"updating {uri}, name: {name}, public: {public}, collab: {collaborative}, "
                     f"description: {(description[:30] + '...' if len(description) > 33 else description) if description is not None else None}")
 
-        headers = {"Content-Type": "application/json"}
-
-        json = {}
-
-        if name is not None:
-            json['name'] = name
-
-        if public is not None:
-            json['public'] = public
-
-        if collaborative is not None:
-            json['collaborative'] = collaborative
-
-        if description is not None:
-            json['description'] = description
-
-        if len(json) == 0:
+        if all(v is None for v in [name, public, collaborative, description]):
             logger.warning('update dictionairy length 0')
-            return None
         else:
-            req = self.put_request('changePlaylistDetails', f'playlists/{uri.object_id}',
-                                   json=json, headers=headers)
-            if req:
-                return req
-            else:
-                logger.error('error updating details')
-                return None
+            self.put_request(f'playlists/{uri.object_id}',
+                             name=name,
+                             public=public,
+                             collaborative=collaborative,
+                             description=description)
 
-    def add_playlist_tracks(self, uri: Uri, uris: List[Uri]) -> List[dict]:
+    def add_playlist_tracks(self, uri: Uri, uris: List[Uri]) -> List[str]:
 
         logger.info(f"adding {len(uris)} tracks to {uri}")
 
-        headers = {"Content-Type": "application/json"}
+        snapshot_ids = [
+            self.post_request(f'playlists/{uri.object_id}/tracks',
+                              uris=[str(i) for i in uris[:100]])["snapshot_id"]
+        ]
 
-        json = {"uris": [str(i) for i in uris[:100]]}
+        if len(uris) > 100:
+            snapshot_ids += self.add_playlist_tracks(uri, uris[100:])
 
-        req = self.post_request('addPlaylistTracks', f'playlists/{uri.object_id}/tracks',
-                                json=json, headers=headers)
-
-        if req is not None:
-            resp = req.json()
-
-            snapshots = [resp]
-
-            if len(uris) > 100:
-
-                snapshots += self.add_playlist_tracks(uri, uris[100:])
-
-            return snapshots
-
-        else:
-            logger.error(f'error retrieving tracks {uri}, total: {len(uris)}')
-            return []
+        return snapshot_ids
 
     def get_recommendations(self,
                             tracks: List[str] = None,
@@ -756,14 +670,8 @@ class Network:
 
         if len(params) == 1:
             logger.warning('update dictionairy length 0')
-            return None
         else:
-            resp = self.get_request('getRecommendations', 'recommendations', params=params)
-            if resp:
-                return Recommendations(**resp)
-            else:
-                logger.error('error getting recommendations')
-                return None
+            return Recommendations(**self.get_request('recommendations', params=params))
 
     def write_playlist_object(self,
                               playlist: FullPlaylist,
@@ -796,7 +704,7 @@ class Network:
                                 uri: Uri,
                                 range_start: int,
                                 range_length: int,
-                                insert_before: int) -> Optional[Response]:
+                                insert_before: int) -> dict:
 
         logger.info(f'reordering {uri} tracks, start: {range_start}, length: {range_length}, before: {insert_before}')
 
@@ -810,16 +718,10 @@ class Network:
             logger.error('insert_before must be positive')
             raise ValueError('insert_before must be positive')
 
-        json = {'range_start': range_start,
-                'range_length': range_length,
-                'insert_before': insert_before}
-
-        resp = self.put_request('reorderPlaylistTracks', f'playlists/{uri.object_id}/tracks', json=json)
-
-        if resp:
-            return resp
-        else:
-            logger.error('error reordering playlist')
+        return self.put_request(f'playlists/{uri.object_id}/tracks',
+                                range_start=range_start,
+                                range_length=range_length,
+                                insert_before=insert_before)
 
     def get_track_audio_features(self, uris: List[Uri]) -> Optional[List[AudioFeatures]]:
         logger.info(f'getting {len(uris)} features')
@@ -827,27 +729,22 @@ class Network:
         audio_features = []
         chunked_uris = list(self.chunk(uris, 100))
         for chunk in chunked_uris:
-            resp = self.get_request('getAudioFeatures',
-                                    url='audio-features',
-                                    params={'ids': ','.join(i.object_id for i in chunk)})
+            resp = self.get_request(url='audio-features', ids=','.join(i.object_id for i in chunk))
 
-            if resp:
-                if resp.get('audio_features', None):
-                    return [AudioFeatures(**i) for i in resp['audio_features']]
-                else:
-                    logger.error('no audio features included')
+            if resp.get('audio_features', None):
+                return [AudioFeatures(**i) for i in resp['audio_features']]
             else:
-                logger.error('no response')
+                logger.error('no audio features included')
 
         if len(audio_features) == len(uris):
             return audio_features
         else:
             logger.error('mismatched length of input and response')
 
-    def populate_track_audio_features(self, tracks=Union[TrackFull, List[TrackFull]]):
+    def populate_track_audio_features(self, tracks=Union[SimplifiedTrack, List[SimplifiedTrack]]):
         logger.info(f'populating {len(tracks)} features')
 
-        if isinstance(tracks, TrackFull):
+        if isinstance(tracks, SimplifiedTrack):
             audio_features = self.get_track_audio_features([tracks.uri])
 
             if audio_features:
@@ -860,15 +757,15 @@ class Network:
                 logger.error(f'no audio features returned for {tracks.uri}')
 
         elif isinstance(tracks, List):
-            if all(isinstance(i, TrackFull) for i in tracks):
+            if all(isinstance(i, SimplifiedTrack) for i in tracks):
                 audio_features = self.get_track_audio_features([i.uri for i in tracks])
 
                 if audio_features:
                     if len(audio_features) != len(tracks):
                         logger.error(f'{len(audio_features)} features returned for {len(tracks)} tracks')
 
-                    for index, track in enumerate(tracks):
-                        track.audio_features = audio_features[index]
+                    for track, audio_feature in zip(tracks, audio_features):
+                        track.audio_features = audio_feature
 
                     return tracks
                 else:
@@ -894,7 +791,7 @@ class Network:
         tracks = []
         chunked_uris = list(self.chunk(uris, 50))
         for chunk in chunked_uris:
-            resp = self.get_request(method='getTracks', url='tracks', params={'ids': ','.join([i.object_id for i in chunk])})
+            resp = self.get_request(url='tracks', ids=','.join([i.object_id for i in chunk]))
             if resp:
                 tracks += [TrackFull(**i) for i in resp.get('tracks', [])]
 
@@ -930,7 +827,7 @@ class Network:
         albums = []
         chunked_uris = list(self.chunk(uris, 50))
         for chunk in chunked_uris:
-            resp = self.get_request(method='getAlbums', url='albums', params={'ids': ','.join([i.object_id for i in chunk])})
+            resp = self.get_request(url='albums', ids=','.join([i.object_id for i in chunk]))
             if resp:
                 albums += [AlbumFull(**i) for i in resp.get('albums', [])]
 
@@ -966,7 +863,7 @@ class Network:
         artists = []
         chunked_uris = list(self.chunk(uris, 50))
         for chunk in chunked_uris:
-            resp = self.get_request(method='getArtists', url='artists', params={'ids': ','.join([i.object_id for i in chunk])})
+            resp = self.get_request(url='artists', ids=','.join([i.object_id for i in chunk]))
             if resp:
                 artists += [ArtistFull(**i) for i in resp.get('artists', [])]
 
@@ -1008,15 +905,12 @@ class Network:
         if artist is not None:
             queries.append(f'artist:{artist}')
 
-        params = {
-            'q': ' '.join(queries),
-            'type': ','.join([i.name for i in query_types]),
-            'limit': response_limit
-        }
-
         logger.info(f'querying track: {track}, album: {album}, artist: {artist}')
 
-        resp = self.get_request(method='search', url='search', params=params)
+        resp = self.get_request(url='search',
+                                q=' '.join(queries),
+                                type=','.join([i.name for i in query_types]),
+                                limit=response_limit)
 
         albums = [SimplifiedAlbum(**i) for i in resp.get('albums', {}).get('items', [])]
         artists = [ArtistFull(**i) for i in resp.get('artists', {}).get('items', [])]
@@ -1070,72 +964,47 @@ class PageCollection:
 
     def continue_iteration(self):
         if self.total_limit:
-            if len(self) < self.total_limit:
-                if len(self.pages) > 0:
-                    if self.pages[-1].next_link:
-                        self.iterate(self.pages[-1].next_link)
-                else:
-                    raise IndexError('no pages')
+            if len(self) >= self.total_limit:
+                return
+
+        if len(self.pages) > 0:
+            if self.pages[-1].next:
+                self.iterate(self.pages[-1].next)
         else:
-            if len(self.pages) > 0:
-                if self.pages[-1].next_link:
-                    self.iterate(self.pages[-1].next_link)
-            else:
-                raise IndexError('no pages')
+            raise IndexError('no pages')
 
     def iterate(self, url=None):
         logger.debug(f'iterating {self.name}, {len(self.pages)}/{self.page_limit}')
 
         params = {'limit': self.page_limit}
         if url:
-            resp = self.net.get_request(method=self.name, whole_url=url, params=params)
+            resp = self.net.get_request(whole_url=url, params=params)
         else:
             if self.url:
-                resp = self.net.get_request(method=self.name, url=self.url, params=params)
+                resp = self.net.get_request(url=self.url, params=params)
             else:
                 raise ValueError('no url to query')
 
-        if resp:
-            page = self.add_page(resp)
-            if page.next_link:
-                if self.total_limit:
-                    if len(self) < self.total_limit:
-                        self.iterate(page.next_link)
-                else:
-                    self.iterate(page.next_link)
-        else:
-            logger.error('no response')
+        page = self.add_page(resp)
+        if page.next:
+            if self.total_limit:
+                if len(self) < self.total_limit:
+                    self.iterate(page.next)
+            else:
+                self.iterate(page.next)
 
     def add_page(self, page_dict):
-        page = self.parse_page(page_dict)
+        page = Page(**page_dict)
         self.pages.append(page)
         return page
 
-    @staticmethod
-    def parse_page(page_dict):
-        return Page(
-            href=page_dict['href'],
-            items=page_dict['items'],
-            response_limit=page_dict['limit'],
-            next_link=page_dict['next'],
-            offset=page_dict.get('offset', None),
-            previous=page_dict.get('previous', None),
-            total=page_dict.get('total', None))
 
-
+@dataclass
 class Page:
-    def __init__(self,
-                 href: str,
-                 items: List,
-                 response_limit: int,
-                 next_link: str,
-                 previous: str,
-                 total: int,
-                 offset: int = None):
-        self.href = href
-        self.items = items
-        self.response_limit = response_limit
-        self.next_link = next_link
-        self.offset = offset
-        self.previous = previous
-        self.total = total
+    href: str
+    items: List
+    limit: int
+    next: str
+    previous: str
+    total: int
+    offset: int = None
