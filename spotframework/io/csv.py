@@ -28,7 +28,7 @@ def export_playlist(playlist, path, name=None):
                 'added': track.added_at,
                 'track id': track.track.uri.object_id if track.track.uri is not None else 'none',
                 'album id': track.track.album.uri.object_id if track.track.album.uri is not None else 'none',
-                'artist id': ', '.join(x.uri.object_id for x in track.track.artists),
+                'artist id': ', '.join(x.uri.object_id for x in track.track.artists if x.uri is not None),
                 'added by': track.added_by.id,
                 'album artist': ', '.join(x.name for x in track.track.album.artists),
                 'artist': ', '.join(x.name for x in track.track.artists)
