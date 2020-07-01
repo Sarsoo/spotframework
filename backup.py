@@ -34,7 +34,7 @@ if __name__ == '__main__':
                                   refresh_token=os.environ['SPOT_REFRESH'])).refresh_access_token()
 
     try:
-        playlists = network.get_user_playlists(response_limit=5)
+        playlists = network.get_user_playlists()
 
         for playlist in playlists:
             try:
