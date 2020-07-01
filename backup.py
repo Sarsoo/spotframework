@@ -1,5 +1,5 @@
-from  spotframework.net.user import NetworkUser
-from  spotframework.net.network import Network
+from spotframework.net.user import NetworkUser
+from spotframework.net.network import Network, SpotifyNetworkException
 import spotframework.io.csv as csvwrite
 
 import sys
@@ -32,22 +32,30 @@ if __name__ == '__main__':
     network = Network(NetworkUser(client_id=os.environ['SPOT_CLIENT'],
                                   client_secret=os.environ['SPOT_SECRET'],
                                   refresh_token=os.environ['SPOT_REFRESH'])).refresh_access_token()
-    playlists = network.get_user_playlists()
 
-    for playlist in playlists:
-        playlist.tracks = network.get_playlist_tracks(playlist.uri)
+    try:
+        playlists = network.get_user_playlists(response_limit=5)
 
-    path = sys.argv[1]
+        for playlist in playlists:
+            try:
+                playlist.tracks = network.get_playlist_tracks(playlist.uri)
+            except SpotifyNetworkException:
+                logger.exception(f'error occured during {playlist.name} track retrieval')
 
-    datepath = str(datetime.datetime.now()).split(' ')[0].replace('-', '/')
+        path = sys.argv[1]
 
-    totalpath = os.path.join(path, datepath)
-    pathdir = os.path.dirname(totalpath)
-    if not os.path.exists(totalpath):
-        os.makedirs(totalpath)
+        datepath = str(datetime.datetime.now()).split(' ')[0].replace('-', '/')
 
-    for play in playlists:
-        csvwrite.export_playlist(play, totalpath)
+        totalpath = os.path.join(path, datepath)
+        pathdir = os.path.dirname(totalpath)
+        if not os.path.exists(totalpath):
+            os.makedirs(totalpath)
+
+        for play in playlists:
+            csvwrite.export_playlist(play, totalpath)
+
+    except SpotifyNetworkException:
+        logger.exception('error occured during user playlist retrieval')
 
     # except Exception as e:
     #     logger.exception(f'exception occured')

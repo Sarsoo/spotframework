@@ -236,8 +236,8 @@ class Network:
             self.user.last_refreshed = datetime.datetime.utcnow()
             for func in self.user.on_refresh:
                 func(self.user)
-        except SpotifyNetworkException as e:
-            logger.error(f'error refreshing user token - {e}')
+        except SpotifyNetworkException:
+            logger.exception(f'error refreshing user token')
 
         return self
 
@@ -373,17 +373,18 @@ class Network:
 
         return return_items
 
-    def get_user_playlists(self) -> List[SimplifiedPlaylist]:
+    def get_user_playlists(self, response_limit: int = None) -> List[SimplifiedPlaylist]:
         """retrieve user owned playlists
 
+        :param response_limit: max playlists to return
         :return: List of user owned playlists if available
         """
 
         logger.info('pulling all playlists')
 
-        playlists = self.get_playlists()
+        playlists = self.get_playlists(response_limit=response_limit)
 
-        if self.user.user.id is None:
+        if self.user.user is None:
             logger.debug('no user info, refreshing for filter')
             self.refresh_user_info()
 

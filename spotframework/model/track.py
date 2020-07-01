@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Union, List
+from typing import Union, List
 from datetime import datetime
 from dataclasses import dataclass, field
 
@@ -9,8 +9,7 @@ from enum import Enum
 import spotframework.model.album
 import spotframework.model.artist
 import spotframework.model.service
-if TYPE_CHECKING:
-    from spotframework.model.user import PublicUser
+import spotframework.model.user
 
 
 @dataclass
@@ -105,7 +104,7 @@ class LibraryTrack:
 @dataclass
 class PlaylistTrack:
     added_at: datetime
-    added_by: PublicUser
+    added_by: spotframework.model.user.PublicUser
     is_local: bool
     primary_color: str
     track: TrackFull
@@ -114,6 +113,9 @@ class PlaylistTrack:
     def __post_init__(self):
         if isinstance(self.track, dict):
             self.track = TrackFull(**self.track)
+
+        if isinstance(self.added_by, dict):
+            self.added_by = spotframework.model.user.PublicUser(**self.added_by)
 
         if isinstance(self.added_at, str):
             self.added_at = datetime.strptime(self.added_at, '%Y-%m-%dT%H:%M:%S%z')

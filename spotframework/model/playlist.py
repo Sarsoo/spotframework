@@ -119,6 +119,23 @@ class SimplifiedPlaylist:
 class FullPlaylist(SimplifiedPlaylist):
     followers: dict = None
 
+    def __post_init__(self):
+        if isinstance(self.tracks, dict):
+            self.tracks = []
+
+        if isinstance(self.uri, str):
+            self.uri = Uri(self.uri)
+
+        if self.uri:
+            if self.uri.object_type != Uri.ObjectType.playlist:
+                raise TypeError('provided uri not for a playlist')
+
+        if all((isinstance(i, dict) for i in self.images)):
+            self.images = [Image(**i) for i in self.images]
+
+        if isinstance(self.owner, dict):
+            self.owner = PublicUser(**self.owner)
+
     def __str__(self):
         prefix = f'\n==={self.name}===\n\n' if self.name is not None else ''
         prefix += f'uri: {self.uri}\n' if self.uri is not None else ''

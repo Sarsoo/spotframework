@@ -15,7 +15,7 @@ class Player:
         self.last_status = None
 
     def __str__(self):
-        return f'{self.net.user.user.display_name} - {self.status}'
+        return f'{self.net.user.user.id} - {self.status}'
 
     def __repr__(self):
         return f'Player: {self.net.user} - {self.status}'
@@ -24,8 +24,8 @@ class Player:
     def available_devices(self):
         try:
             return self.net.get_available_devices()
-        except SpotifyNetworkException as e:
-            logger.error(f'error retrieving current devices - {e}')
+        except SpotifyNetworkException:
+            logger.exception(f'error retrieving current devices')
 
     @property
     def status(self):
@@ -34,8 +34,8 @@ class Player:
             if new_status:
                 self.last_status = new_status
                 return self.last_status
-        except SpotifyNetworkException as e:
-            logger.error(f'error retrieving current devices - {e}')
+        except SpotifyNetworkException:
+            logger.exception(f'error retrieving current devices')
 
     def play(self,
              context: Union[Context, AlbumFull, FullPlaylist] = None,
@@ -70,20 +70,20 @@ class Player:
                     self.net.play(uris=[i.uri for i in tracks] + uris)
             else:
                 self.net.play()
-        except SpotifyNetworkException as e:
-            logger.error(f'error playing - {e}')
+        except SpotifyNetworkException:
+            logger.exception(f'error playing')
 
     def change_device(self, device: Device):
         try:
             self.net.change_playback_device(device.id)
-        except SpotifyNetworkException as e:
-            logger.error(f'error changing device to {device.name} - {e}')
+        except SpotifyNetworkException:
+            logger.exception(f'error changing device to {device.name}')
 
     def pause(self):
         try:
             self.net.pause()
-        except SpotifyNetworkException as e:
-            logger.error(f'error pausing - {e}')
+        except SpotifyNetworkException:
+            logger.exception(f'error pausing')
 
     def toggle_playback(self):
         status = self.status
@@ -96,28 +96,28 @@ class Player:
             else:
                 logger.warning('no current playback, playing')
                 self.play()
-        except SpotifyNetworkException as e:
-            logger.error(f'error toggling playback - {e}')
+        except SpotifyNetworkException:
+            logger.exception(f'error toggling playback')
 
     def next(self):
         try:
             self.net.next()
-        except SpotifyNetworkException as e:
-            logger.error(f'error skipping track - {e}')
+        except SpotifyNetworkException:
+            logger.exception(f'error skipping track')
 
     def previous(self):
         try:
             self.net.previous()
-        except SpotifyNetworkException as e:
-            logger.error(f'error reversing track - {e}')
+        except SpotifyNetworkException:
+            logger.exception(f'error reversing track')
 
     def shuffle(self, state=None):
         if state is not None:
             if isinstance(state, bool):
                 try:
                     self.net.set_shuffle(state)
-                except SpotifyNetworkException as e:
-                    logger.error(f'error setting shuffle - {e}')
+                except SpotifyNetworkException:
+                    logger.exception(f'error setting shuffle')
             else:
                 raise TypeError(f'{state} is not bool')
         else:
@@ -135,7 +135,7 @@ class Player:
                     self.net.set_volume(value, deviceid=device.id)
                 else:
                     self.net.set_volume(value)
-            except SpotifyNetworkException as e:
-                logger.error(f'error setting volume to {value} - {e}')
+            except SpotifyNetworkException:
+                logger.exception(f'error setting volume to {value}')
         else:
             logger.error(f'{value} not between 0 and 100')

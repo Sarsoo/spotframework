@@ -4,7 +4,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-headers = ['name', 'artist', 'album', 'album artist', 'added', 'track id', 'album id', 'added by']
+headers = ['name', 'artist', 'album', 'album artist', 'added', 'track id', 'album id', 'artist id', 'added by']
 
 
 def export_playlist(playlist, path, name=None):
@@ -23,12 +23,13 @@ def export_playlist(playlist, path, name=None):
 
         for track in playlist.tracks:
             writer.writerow({
-                'name': track.name,
-                'album': track.album.name,
+                'name': track.track.name,
+                'album': track.track.album.name,
                 'added': track.added_at,
-                'track id': track.uri.object_id if track.uri is not None else 'none',
-                'album id': track.album.uri.object_id if track.album.uri is not None else 'none',
-                'added by': track.added_by.username,
-                'album artist': ', '.join(x.name for x in track.album.artists),
-                'artist': ', '.join(x.name for x in track.artists)
+                'track id': track.track.uri.object_id if track.track.uri is not None else 'none',
+                'album id': track.track.album.uri.object_id if track.track.album.uri is not None else 'none',
+                'artist id': ', '.join(x.uri.object_id for x in track.track.artists),
+                'added by': track.added_by.id,
+                'album artist': ', '.join(x.name for x in track.track.album.artists),
+                'artist': ', '.join(x.name for x in track.track.artists)
             })

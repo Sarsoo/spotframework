@@ -23,8 +23,8 @@ class Listener:
         self.now_playing = None
         try:
             self.now_playing: Optional[CurrentlyPlaying] = net.get_player()
-        except SpotifyNetworkException as e:
-            logger.error(f'error occured retrieving currently playing - {e}')
+        except SpotifyNetworkException:
+            logger.exception(f'error occured retrieving currently playing')
 
         self.on_playback_change = []
 
@@ -45,8 +45,8 @@ class Listener:
             else:
                 self.now_playing = live_now_playing
 
-        except SpotifyNetworkException as e:
-            logger.error(f'error occured retrieving currently playing - {e}')
+        except SpotifyNetworkException:
+            logger.exception(f'error occured retrieving currently playing')
 
     def update_recent_tracks(self):
         """retrieve recently played tracks and merge with previously stored"""
@@ -62,5 +62,5 @@ class Listener:
             if self.max_recent_tracks is not None:
                 self.recent_tracks = self.recent_tracks[-self.max_recent_tracks:]
 
-        except SpotifyNetworkException as e:
-            logger.error(f'error occured retrieving recent tracks - {e}')
+        except SpotifyNetworkException:
+            logger.exception(f'error occured retrieving recent tracks')
