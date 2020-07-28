@@ -40,7 +40,7 @@ def sort_by_added_date(tracks: List, reverse: bool = False) -> List:
 def sort_artist_album_track_number(tracks: List, inner_tracks_only: bool = False) -> List:
     sorted_tracks = sorted([(i, w) for i, w in zip(*get_track_objects(tracks))
                             if hasattr(i, 'album') and isinstance(getattr(i, 'album'), SimplifiedAlbum)],
-                           key=lambda x: (x[0].artists[0].name.lower(),
+                           key=lambda x: (x[0].album.artists[0].name.lower(),
                                           x[0].album.name.lower(),
                                           x[0].track_number))
     if inner_tracks_only:
