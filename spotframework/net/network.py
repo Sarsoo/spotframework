@@ -103,6 +103,7 @@ class Network:
 
         if 200 <= response.status_code < 300:
             logger.debug(f'{method} {url_path or whole_url} {response.status_code}')
+            self.refresh_counter = 0
 
             if response.status_code == 204:
                 return None
