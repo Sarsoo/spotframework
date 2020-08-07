@@ -18,9 +18,9 @@ from spotframework.model.artist import ArtistFull
 from spotframework.model.album import AlbumFull, LibraryAlbum, SimplifiedAlbum
 from spotframework.model.track import SimplifiedTrack, TrackFull, PlaylistTrack, PlayedTrack, LibraryTrack, \
     AudioFeatures, Device, CurrentlyPlaying, Recommendations
-from spotframework.model.podcast import SimplifiedEpisode, EpisodeFull
+from spotframework.model.podcast import SimplifiedEpisode, EpisodeFull, SimplifiedShow, ShowFull
 from spotframework.model.uri import Uri
-from spotframework.util.decorators import inject_uri
+from spotframework.util.decorators import inject_uri, uri_type_check
 
 limit = 50
 
@@ -251,13 +251,13 @@ class Network:
         self.user.user = self.get_current_user()
 
     @inject_uri(uris=False)
+    @uri_type_check(uri_type=Uri.ObjectType.playlist)
     def get_playlist(self,
                      uri: Uri,
                      tracks: bool = True) -> FullPlaylist:
         """get playlist object with tracks for uri
 
         :param uri: target request uri
-        :param uri_string: target request uri as string
         :param tracks: populate tracks of playlist during generation
         :return: playlist object
         """
@@ -394,13 +394,13 @@ class Network:
             logger.error('no playlists returned to filter')
 
     @inject_uri(uris=False)
+    @uri_type_check(uri_type=Uri.ObjectType.playlist)
     def get_playlist_tracks(self,
                             uri: Uri,
                             response_limit: int = None) -> List[PlaylistTrack]:
         """get list of playlists tracks for uri
 
         :param uri: target playlist uri
-        :param uri_string: target playlist uri as string
         :param response_limit: max tracks to return
         :return: list of playlist tracks if available
         """
@@ -416,6 +416,32 @@ class Network:
 
         if len(return_items) == 0:
             logger.error('no tracks returned')
+
+        return return_items
+
+    @inject_uri(uris=False)
+    @uri_type_check(uri_type=Uri.ObjectType.show)
+    def get_show_episodes(self,
+                          uri: Uri,
+                          response_limit: int = None) -> List[SimplifiedEpisode]:
+        """get list of shows episodes for uri
+
+        :param uri: target show uri
+        :param response_limit: max episodes to return
+        :return: list of show episodes if available
+        """
+
+        logger.info(f"paging episodes for {uri}")
+
+        pager = PageCollection(net=self, url=f'shows/{uri.object_id}/episodes', name='getShowEpisodes')
+        if response_limit:
+            pager.total_limit = response_limit
+        pager.iterate()
+
+        return_items = [init_with_key_filter(SimplifiedEpisode, i) for i in pager.items]
+
+        if len(return_items) == 0:
+            logger.error('no episodes returned')
 
         return return_items
 
@@ -587,6 +613,7 @@ class Network:
             logger.error(f"{volume} not accepted value")
 
     @inject_uri
+    @uri_type_check(uri_type=Uri.ObjectType.playlist, uris_type=(Uri.ObjectType.track, Uri.ObjectType.episode))
     def replace_playlist_tracks(self,
                                 uri: Uri,
                                 uris: List[Uri]) -> Optional[List[str]]:
@@ -599,6 +626,7 @@ class Network:
             return self.add_playlist_tracks(uri=uri, uris=uris[100:])
 
     @inject_uri(uris=False)
+    @uri_type_check(uri_type=Uri.ObjectType.playlist)
     def change_playlist_details(self,
                                 uri: Uri,
                                 name: str = None,
@@ -619,6 +647,7 @@ class Network:
                              description=description)
 
     @inject_uri
+    @uri_type_check(uri_type=Uri.ObjectType.playlist, uris_type=(Uri.ObjectType.track, Uri.ObjectType.episode))
     def add_playlist_tracks(self, uri: Uri, uris: List[Uri]) -> List[str]:
 
         logger.info(f"adding {len(uris)} tracks to {uri}")
@@ -684,6 +713,7 @@ class Network:
             logger.error('playlist has no id')
 
     @inject_uri(uris=False)
+    @uri_type_check(uri_type=Uri.ObjectType.playlist)
     def reorder_playlist_tracks(self,
                                 uri: Uri,
                                 range_start: int,
@@ -708,6 +738,7 @@ class Network:
                                 insert_before=insert_before)
 
     @inject_uri(uri=False)
+    @uri_type_check(uris_type=Uri.ObjectType.track)
     def get_track_audio_features(self, uris: List[Uri]) -> Optional[List[AudioFeatures]]:
         logger.info(f'getting {len(uris)} features')
 
@@ -759,12 +790,10 @@ class Network:
             raise TypeError('must provide either single or list of spotify tracks')
 
     @inject_uri(uri=False)
+    @uri_type_check(uris_type=Uri.ObjectType.track)
     def get_tracks(self, uris: List[Uri]) -> List[TrackFull]:
 
         logger.info(f'getting {len(uris)} tracks')
-
-        if not all(i.object_type == Uri.ObjectType.track for i in uris):
-            raise TypeError('uris must be of type track')
 
         tracks = []
         chunked_uris = list(self.chunk(uris, 50))
@@ -776,6 +805,7 @@ class Network:
         return tracks
 
     @inject_uri(uris=False)
+    @uri_type_check(uri_type=Uri.ObjectType.track)
     def get_track(self, uri) -> Optional[TrackFull]:
 
         track = self.get_tracks(uris=[uri])
@@ -785,12 +815,10 @@ class Network:
             return None
 
     @inject_uri(uri=False)
+    @uri_type_check(uris_type=Uri.ObjectType.album)
     def get_albums(self, uris: List[Uri]) -> List[AlbumFull]:
 
         logger.info(f'getting {len(uris)} albums')
-
-        if not all(i.object_type == Uri.ObjectType.album for i in uris):
-            raise TypeError('uris must be of type album')
 
         albums = []
         chunked_uris = list(self.chunk(uris, 50))
@@ -802,6 +830,7 @@ class Network:
         return albums
 
     @inject_uri(uris=False)
+    @uri_type_check(uri_type=Uri.ObjectType.album)
     def get_album(self, uri: Uri) -> Optional[AlbumFull]:
 
         album = self.get_albums(uris=[uri])
@@ -811,12 +840,10 @@ class Network:
             return None
 
     @inject_uri(uri=False)
+    @uri_type_check(uris_type=Uri.ObjectType.artist)
     def get_artists(self, uris) -> List[ArtistFull]:
 
         logger.info(f'getting {len(uris)} artists')
-
-        if not all(i.object_type == Uri.ObjectType.artist for i in uris):
-            raise TypeError('uris must be of type artist')
 
         artists = []
         chunked_uris = list(self.chunk(uris, 50))
@@ -828,6 +855,7 @@ class Network:
         return artists
 
     @inject_uri(uris=False)
+    @uri_type_check(uri_type=Uri.ObjectType.artist)
     def get_artist(self, uri) -> Optional[ArtistFull]:
 
         artist = self.get_artists(uris=[uri])
@@ -835,6 +863,67 @@ class Network:
             return artist[0]
         else:
             return None
+
+    @inject_uri(uri=False)
+    @uri_type_check(uris_type=Uri.ObjectType.show)
+    def get_shows(self, uris) -> List[SimplifiedShow]:
+
+        logger.info(f'getting {len(uris)} shows')
+
+        shows = []
+        chunked_uris = list(self.chunk(uris, 50))
+        for chunk in chunked_uris:
+            resp = self.get_request(url='shows', ids=','.join([i.object_id for i in chunk]))
+            if resp:
+                shows += [init_with_key_filter(SimplifiedShow, i) for i in resp.get('shows', [])]
+
+        return shows
+
+    @inject_uri(uris=False)
+    @uri_type_check(uri_type=Uri.ObjectType.show)
+    def get_show(self, uri, episodes: bool = True) -> Optional[ShowFull]:
+
+        logger.info(f"retrieving {uri}")
+
+        resp = self.get_request(f'shows/{uri.object_id}')
+        show = init_with_key_filter(ShowFull, resp)
+
+        if resp.get('episodes') and episodes:
+            if 'next' in resp['episodes']:
+                logger.debug(f'paging episodes for {uri}')
+
+                track_pager = PageCollection(net=self, page=resp['episodes'])
+                track_pager.continue_iteration()
+
+                show.episodes = [init_with_key_filter(SimplifiedEpisode, i) for i in track_pager.items]
+            else:
+                logger.debug(f'parsing {len(resp.get("episodes"))} tracks for {uri}')
+                show.episodes = [init_with_key_filter(SimplifiedEpisode, i) for i in resp.get('episodes', [])]
+        return show
+
+    @inject_uri(uri=False)
+    @uri_type_check(uris_type=Uri.ObjectType.episode)
+    def get_episodes(self, uris) -> List[EpisodeFull]:
+
+        logger.info(f'getting {len(uris)} episodes')
+
+        episodes = []
+        chunked_uris = list(self.chunk(uris, 50))
+        for chunk in chunked_uris:
+            resp = self.get_request(url='episodes', ids=','.join([i.object_id for i in chunk]))
+            if resp:
+                episodes += [init_with_key_filter(EpisodeFull, i) for i in resp.get('episodes', [])]
+
+        return episodes
+
+    @inject_uri(uris=False)
+    @uri_type_check(uri_type=Uri.ObjectType.episode)
+    def get_episode(self, uri) -> EpisodeFull:
+
+        logger.info(f"retrieving {uri}")
+
+        resp = self.get_request(f'episodes/{uri.object_id}')
+        return init_with_key_filter(EpisodeFull, resp)
 
     def search(self,
                query_types: List[Uri.ObjectType],

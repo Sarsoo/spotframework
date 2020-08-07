@@ -28,9 +28,10 @@ class SimplifiedEpisode:
     name: str
     release_date: datetime
     release_date_precision: str
-    resume_point: ResumePoint
     type: str
     uri: Union[str, Uri]
+    language: str = None # soon to be deprecated
+    resume_point: ResumePoint = None
 
     def __post_init__(self):
 
@@ -71,6 +72,7 @@ class SimplifiedShow:
     name: str
     publisher: str
     type: str
+    total_episodes: int
     uri: Union[str, Uri]
 
     def __post_init__(self):
@@ -79,15 +81,15 @@ class SimplifiedShow:
             self.uri = Uri(self.uri)
 
         if self.uri:
-            if self.uri.object_type != Uri.ObjectType.episode:
-                raise TypeError('provided uri not for an episode')
+            if self.uri.object_type != Uri.ObjectType.show:
+                raise TypeError('provided uri not for an show')
 
         if all((isinstance(i, dict) for i in self.images)):
             self.images = [init_with_key_filter(Image, i) for i in self.images]
 
 @dataclass
 class EpisodeFull(SimplifiedEpisode):
-    show: SimplifiedShow
+    show: SimplifiedShow = None
 
     def __post_init__(self):
         super().__post_init__()
