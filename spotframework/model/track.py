@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import Union, List
 from datetime import datetime
 from dataclasses import dataclass, field
+import logging
 
 import spotframework.model
 from spotframework.model.uri import Uri
@@ -10,6 +11,11 @@ import spotframework.model.album
 import spotframework.model.artist
 import spotframework.model.service
 import spotframework.model.user
+from spotframework.model.podcast import EpisodeFull
+
+from spotframework.model import init_with_key_filter
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -37,11 +43,11 @@ class SimplifiedTrack:
             self.uri = Uri(self.uri)
 
         if self.uri:
-            if self.uri.object_type != Uri.ObjectType.track:
+            if self.uri.object_type not in [Uri.ObjectType.track, Uri.ObjectType.episode]:
                 raise TypeError('provided uri not for a track')
 
         if all((isinstance(i, dict) for i in self.artists)):
-            self.artists = [spotframework.model.artist.SimplifiedArtist(**i) for i in self.artists]
+            self.artists = [init_with_key_filter(spotframework.model.artist.SimplifiedArtist, i) for i in self.artists]
 
     @property
     def artists_names(self) -> str:
@@ -71,18 +77,10 @@ class TrackFull(SimplifiedTrack):
         return self.album.artists_names
 
     def __post_init__(self):
-        if isinstance(self.uri, str):
-            self.uri = Uri(self.uri)
-
-        if self.uri:
-            if self.uri.object_type != Uri.ObjectType.track:
-                raise TypeError('provided uri not for a track')
-
-        if all((isinstance(i, dict) for i in self.artists)):
-            self.artists = [spotframework.model.artist.SimplifiedArtist(**i) for i in self.artists]
+        super().__post_init__()
 
         if isinstance(self.album, dict):
-            self.album = spotframework.model.album.SimplifiedAlbum(**self.album)
+            self.album = init_with_key_filter(spotframework.model.album.SimplifiedAlbum, self.album)
 
     def __eq__(self, other):
         return isinstance(other, TrackFull) and other.uri == self.uri
@@ -95,7 +93,7 @@ class LibraryTrack:
 
     def __post_init__(self):
         if isinstance(self.track, dict):
-            self.track = TrackFull(**self.track)
+            self.track = init_with_key_filter(TrackFull, self.track)
 
         if isinstance(self.added_at, str):
             self.added_at = datetime.strptime(self.added_at, '%Y-%m-%dT%H:%M:%S%z')
@@ -107,15 +105,31 @@ class PlaylistTrack:
     added_by: spotframework.model.user.PublicUser
     is_local: bool
     primary_color: str
-    track: TrackFull
+    track: Union[TrackFull, EpisodeFull]
     video_thumbnail: dict
 
     def __post_init__(self):
         if isinstance(self.track, dict):
-            self.track = TrackFull(**self.track)
+
+            # below seems more intuitive, currently parsing episode to track/album/artist structure for
+            # serialising over api, below could be implemented
+
+            # obj_type = None
+            # if self.track['type'] == 'track':
+            #     obj_type = TrackFull
+            #
+            # if self.track['type'] == 'episode':
+            #     obj_type = EpisodeFull
+            #
+            # if obj_type is None:
+            #     raise TypeError(f'unkown obj type found {self.track["type"]}')
+
+            obj_type = TrackFull
+
+            self.track = init_with_key_filter(obj_type, self.track)
 
         if isinstance(self.added_by, dict):
-            self.added_by = spotframework.model.user.PublicUser(**self.added_by)
+            self.added_by = init_with_key_filter(spotframework.model.user.PublicUser, self.added_by)
 
         if isinstance(self.added_at, str):
             self.added_at = datetime.strptime(self.added_at, '%Y-%m-%dT%H:%M:%S%z')
@@ -129,9 +143,9 @@ class PlayedTrack:
 
     def __post_init__(self):
         if isinstance(self.context, dict):
-            self.context = Context(**self.context)
+            self.context = init_with_key_filter(Context, self.context)
         if isinstance(self.track, dict):
-            self.track = TrackFull(**self.track)
+            self.track = init_with_key_filter(TrackFull, self.track)
         if isinstance(self.played_at, str):
             self.played_at = datetime.strptime(self.played_at, '%Y-%m-%dT%H:%M:%S%z')
 
@@ -345,13 +359,13 @@ class CurrentlyPlaying:
 
     def __post_init__(self):
         if isinstance(self.context, Context):
-            self.context = Context(**self.context)
+            self.context = init_with_key_filter(Context, self.context)
 
         if isinstance(self.item, spotframework.model.track.SimplifiedTrack):
-            self.item = spotframework.model.track.SimplifiedTrack(**self.item)
+            self.item = init_with_key_filter(spotframework.model.track.SimplifiedTrack, self.item)
 
         if isinstance(self.device, Device):
-            self.device = Device(**self.device)
+            self.device = init_with_key_filter(Device, self.device)
 
     def __eq__(self, other):
         return isinstance(other, CurrentlyPlaying) and other.item == self.item and other.context == self.context
@@ -389,7 +403,7 @@ class Recommendations:
 
     def __post_init__(self):
         if all((isinstance(i, dict) for i in self.seeds)):
-            self.seeds = [RecommendationsSeed(**i) for i in self.seeds]
+            self.seeds = [init_with_key_filter(RecommendationsSeed, i) for i in self.seeds]
 
         if all((isinstance(i, dict) for i in self.tracks)):
-            self.tracks = [spotframework.model.track.TrackFull(**i) for i in self.tracks]
+            self.tracks = [init_with_key_filter(spotframework.model.track.TrackFull, i) for i in self.tracks]

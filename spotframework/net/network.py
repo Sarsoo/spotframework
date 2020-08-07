@@ -8,14 +8,19 @@ from typing import List, Optional, Union
 import datetime
 from json import JSONDecodeError
 
-from spotframework.model.artist import ArtistFull
-from spotframework.model.user import PublicUser
 from spotframework.net.user import NetworkUser
+
+from spotframework.model import init_with_key_filter
+
+from spotframework.model.user import PublicUser
 from spotframework.model.playlist import SimplifiedPlaylist, FullPlaylist
+from spotframework.model.artist import ArtistFull
+from spotframework.model.album import AlbumFull, LibraryAlbum, SimplifiedAlbum
 from spotframework.model.track import SimplifiedTrack, TrackFull, PlaylistTrack, PlayedTrack, LibraryTrack, \
     AudioFeatures, Device, CurrentlyPlaying, Recommendations
-from spotframework.model.album import AlbumFull, LibraryAlbum, SimplifiedAlbum
+from spotframework.model.podcast import SimplifiedEpisode, EpisodeFull
 from spotframework.model.uri import Uri
+from spotframework.util.decorators import inject_uri
 
 limit = 50
 
@@ -245,9 +250,9 @@ class Network:
     def refresh_user_info(self):
         self.user.user = self.get_current_user()
 
+    @inject_uri(uris=False)
     def get_playlist(self,
-                     uri: Uri = None,
-                     uri_string: str = None,
+                     uri: Uri,
                      tracks: bool = True) -> FullPlaylist:
         """get playlist object with tracks for uri
 
@@ -257,16 +262,10 @@ class Network:
         :return: playlist object
         """
 
-        if uri is None and uri_string is None:
-            raise NameError('no uri provided')
-
-        if uri_string is not None:
-            uri = Uri(uri_string)
-
         logger.info(f"retrieving {uri}")
 
         resp = self.get_request(f'playlists/{uri.object_id}')
-        playlist = FullPlaylist(**resp)
+        playlist = init_with_key_filter(FullPlaylist, resp)
 
         if resp.get('tracks') and tracks:
             if 'next' in resp['tracks']:
@@ -275,10 +274,10 @@ class Network:
                 track_pager = PageCollection(net=self, page=resp['tracks'])
                 track_pager.continue_iteration()
 
-                playlist.tracks = [PlaylistTrack(**i) for i in track_pager.items]
+                playlist.tracks = [init_with_key_filter(PlaylistTrack, i) for i in track_pager.items]
             else:
                 logger.debug(f'parsing {len(resp.get("tracks"))} tracks for {uri}')
-                playlist.tracks = [PlaylistTrack(**i) for i in resp.get('tracks', [])]
+                playlist.tracks = [init_with_key_filter(PlaylistTrack, i) for i in resp.get('tracks', [])]
 
         return playlist
 
@@ -309,7 +308,7 @@ class Network:
                                 public=public,
                                 collaborative=collaborative,
                                 description=description)
-        return FullPlaylist(**req)
+        return init_with_key_filter(FullPlaylist, req)
 
     def get_playlists(self, response_limit: int = None) -> Optional[List[SimplifiedPlaylist]]:
         """get current users playlists
@@ -325,7 +324,7 @@ class Network:
             pager.total_limit = response_limit
         pager.iterate()
 
-        return_items = [SimplifiedPlaylist(**i) for i in pager.items]
+        return_items = [init_with_key_filter(SimplifiedPlaylist, i) for i in pager.items]
 
         if len(return_items) == 0:
             logger.error('no playlists returned')
@@ -346,7 +345,7 @@ class Network:
             pager.total_limit = response_limit
         pager.iterate()
 
-        return_items = [LibraryAlbum(**i) for i in pager.items]
+        return_items = [init_with_key_filter(LibraryAlbum, i) for i in pager.items]
 
         if len(return_items) == 0:
             logger.error('no albums returned')
@@ -367,7 +366,7 @@ class Network:
             pager.total_limit = response_limit
         pager.iterate()
 
-        return_items = [LibraryTrack(**i) for i in pager.items]
+        return_items = [init_with_key_filter(LibraryTrack, i) for i in pager.items]
 
         if len(return_items) == 0:
             logger.error('no tracks returned')
@@ -394,9 +393,9 @@ class Network:
         else:
             logger.error('no playlists returned to filter')
 
+    @inject_uri(uris=False)
     def get_playlist_tracks(self,
-                            uri: Uri = None,
-                            uri_string: str = None,
+                            uri: Uri,
                             response_limit: int = None) -> List[PlaylistTrack]:
         """get list of playlists tracks for uri
 
@@ -406,12 +405,6 @@ class Network:
         :return: list of playlist tracks if available
         """
 
-        if uri is None and uri_string is None:
-            raise NameError('no uri provided')
-
-        if uri_string is not None:
-            uri = Uri(uri_string)
-
         logger.info(f"paging tracks for {uri}")
 
         pager = PageCollection(net=self, url=f'playlists/{uri.object_id}/tracks', name='getPlaylistTracks')
@@ -419,7 +412,7 @@ class Network:
             pager.total_limit = response_limit
         pager.iterate()
 
-        return_items = [PlaylistTrack(**i) for i in pager.items]
+        return_items = [init_with_key_filter(PlaylistTrack, i) for i in pager.items]
 
         if len(return_items) == 0:
             logger.error('no tracks returned')
@@ -435,7 +428,7 @@ class Network:
 
         if len(resp['devices']) == 0:
             logger.error('no devices returned')
-        return [Device(**i) for i in resp['devices']]
+        return [init_with_key_filter(Device, i) for i in resp['devices']]
 
     def get_recently_played_tracks(self,
                                    response_limit: int = None,
@@ -468,7 +461,7 @@ class Network:
             pager.total_limit = 20
         pager.continue_iteration()
 
-        return [PlayedTrack(**i) for i in pager.items]
+        return [init_with_key_filter(PlayedTrack, i) for i in pager.items]
 
     def get_player(self) -> CurrentlyPlaying:
         """get currently playing snapshot (player)"""
@@ -476,7 +469,7 @@ class Network:
         logger.info("polling player")
 
         resp = self.get_request('me/player')
-        return CurrentlyPlaying(**resp)
+        return init_with_key_filter(CurrentlyPlaying, resp)
 
     def get_device_id(self, device_name: str) -> Optional[str]:
         """return device id of device as searched for by name
@@ -498,26 +491,19 @@ class Network:
         logger.info(f"getting current user")
 
         resp = self.get_request('me')
-        return PublicUser(**resp)
+        return init_with_key_filter(PublicUser, resp)
 
     def change_playback_device(self, device_id: str):
         """migrate playback to different device"""
         logger.info(f'shifting playback to {device_id}')
         self.put_request('me/player', device_ids=[device_id], play=True)
 
+    @inject_uri(uri_optional=True, uris_optional=True)
     def play(self,
              uri: Uri = None,
-             uri_string: str = None,
              uris: List[Uri] = None,
-             uri_strings: List[str] = None,
              deviceid: str = None):
         """begin playback"""
-
-        if uri_string is not None:
-            uri = Uri(uri_string)
-
-        if uri_strings is not None:
-            uris = [Uri(i) for i in uri_strings]
 
         logger.info(f"{uri}{' ' + deviceid if deviceid is not None else ''}")
 
@@ -600,25 +586,19 @@ class Network:
         else:
             logger.error(f"{volume} not accepted value")
 
+    @inject_uri
     def replace_playlist_tracks(self,
-                                uri: Uri = None,
-                                uri_string: str = None,
-                                uris: List[Uri] = None,
-                                uri_strings: List[str] = None) -> Optional[List[str]]:
-
-        if uri_string is not None:
-            uri = Uri(uri_string)
-
-        if uri_strings is not None:
-            uris = [Uri(i) for i in uri_strings]
+                                uri: Uri,
+                                uris: List[Uri]) -> Optional[List[str]]:
 
         logger.info(f"replacing {uri} with {'0' if uris is None else len(uris)} tracks")
 
         self.put_request(f'playlists/{uri.object_id}/tracks', uris=[str(i) for i in uris[:100]])
 
         if len(uris) > 100:
-            return self.add_playlist_tracks(uri, uris[100:])
+            return self.add_playlist_tracks(uri=uri, uris=uris[100:])
 
+    @inject_uri(uris=False)
     def change_playlist_details(self,
                                 uri: Uri,
                                 name: str = None,
@@ -638,6 +618,7 @@ class Network:
                              collaborative=collaborative,
                              description=description)
 
+    @inject_uri
     def add_playlist_tracks(self, uri: Uri, uris: List[Uri]) -> List[str]:
 
         logger.info(f"adding {len(uris)} tracks to {uri}")
@@ -648,7 +629,7 @@ class Network:
         ]
 
         if len(uris) > 100:
-            snapshot_ids += self.add_playlist_tracks(uri, uris[100:])
+            snapshot_ids += self.add_playlist_tracks(uri=uri, uris=uris[100:])
 
         return snapshot_ids
 
@@ -673,7 +654,7 @@ class Network:
         if len(params) == 1:
             logger.warning('update dictionairy length 0')
         else:
-            return Recommendations(**self.get_request('recommendations', params=params))
+            return init_with_key_filter(Recommendations, self.get_request('recommendations', params=params))
 
     def write_playlist_object(self,
                               playlist: FullPlaylist,
@@ -686,22 +667,23 @@ class Network:
                 self.replace_playlist_tracks(uri=playlist.uri, uris=[])
             elif playlist.tracks:
                 if append_tracks:
-                    self.add_playlist_tracks(playlist.uri, [i.uri for i in playlist.tracks if
-                                                            isinstance(i, SimplifiedTrack)])
+                    self.add_playlist_tracks(uri=playlist.uri, uris=[i.uri for i in playlist.tracks if
+                                                                     isinstance(i, SimplifiedTrack)])
                 else:
                     self.replace_playlist_tracks(uri=playlist.uri, uris=[i.uri for i in playlist.tracks if
                                                                          isinstance(i, SimplifiedTrack)])
 
             if playlist.name or playlist.collaborative or playlist.public or playlist.description:
-                self.change_playlist_details(playlist.uri,
-                                             playlist.name,
-                                             playlist.public,
-                                             playlist.collaborative,
-                                             playlist.description)
+                self.change_playlist_details(uri=playlist.uri,
+                                             name=playlist.name,
+                                             public=playlist.public,
+                                             collaborative=playlist.collaborative,
+                                             description=playlist.description)
 
         else:
             logger.error('playlist has no id')
 
+    @inject_uri(uris=False)
     def reorder_playlist_tracks(self,
                                 uri: Uri,
                                 range_start: int,
@@ -725,6 +707,7 @@ class Network:
                                 range_length=range_length,
                                 insert_before=insert_before)
 
+    @inject_uri(uri=False)
     def get_track_audio_features(self, uris: List[Uri]) -> Optional[List[AudioFeatures]]:
         logger.info(f'getting {len(uris)} features')
 
@@ -734,7 +717,7 @@ class Network:
             resp = self.get_request(url='audio-features', ids=','.join(i.object_id for i in chunk))
 
             if resp.get('audio_features', None):
-                return [AudioFeatures(**i) for i in resp['audio_features']]
+                return [init_with_key_filter(AudioFeatures, i) for i in resp['audio_features']]
             else:
                 logger.error('no audio features included')
 
@@ -747,7 +730,7 @@ class Network:
         logger.info(f'populating {len(tracks)} features')
 
         if isinstance(tracks, SimplifiedTrack):
-            audio_features = self.get_track_audio_features([tracks.uri])
+            audio_features = self.get_track_audio_features(uris=[tracks.uri])
 
             if audio_features:
                 if len(audio_features) == 1:
@@ -760,7 +743,7 @@ class Network:
 
         elif isinstance(tracks, List):
             if all(isinstance(i, SimplifiedTrack) for i in tracks):
-                audio_features = self.get_track_audio_features([i.uri for i in tracks])
+                audio_features = self.get_track_audio_features(uris=[i.uri for i in tracks])
 
                 if audio_features:
                     if len(audio_features) != len(tracks):
@@ -775,15 +758,8 @@ class Network:
         else:
             raise TypeError('must provide either single or list of spotify tracks')
 
-    def get_tracks(self,
-                   uris: List[Uri] = None,
-                   uri_strings: List[str] = None) -> List[TrackFull]:
-
-        if uris is None and uri_strings is None:
-            raise NameError('no uris provided')
-
-        if uri_strings is not None:
-            uris = [Uri(i) for i in uri_strings]
+    @inject_uri(uri=False)
+    def get_tracks(self, uris: List[Uri]) -> List[TrackFull]:
 
         logger.info(f'getting {len(uris)} tracks')
 
@@ -795,31 +771,21 @@ class Network:
         for chunk in chunked_uris:
             resp = self.get_request(url='tracks', ids=','.join([i.object_id for i in chunk]))
             if resp:
-                tracks += [TrackFull(**i) for i in resp.get('tracks', [])]
+                tracks += [init_with_key_filter(TrackFull, i) for i in resp.get('tracks', [])]
 
         return tracks
 
-    def get_track(self, uri: Uri = None, uri_string: str = None) -> Optional[TrackFull]:
+    @inject_uri(uris=False)
+    def get_track(self, uri) -> Optional[TrackFull]:
 
-        if uri is None and uri_string is None:
-            raise NameError('no uri provided')
-
-        if uri_string is not None:
-            uri = Uri(uri_string)
-
-        track = self.get_tracks([uri])
+        track = self.get_tracks(uris=[uri])
         if len(track) == 1:
             return track[0]
         else:
             return None
 
-    def get_albums(self, uris: List[Uri] = None, uri_strings: List[str] = None) -> List[AlbumFull]:
-
-        if uris is None and uri_strings is None:
-            raise NameError('no uris provided')
-
-        if uri_strings is not None:
-            uris = [Uri(i) for i in uri_strings]
+    @inject_uri(uri=False)
+    def get_albums(self, uris: List[Uri]) -> List[AlbumFull]:
 
         logger.info(f'getting {len(uris)} albums')
 
@@ -831,31 +797,21 @@ class Network:
         for chunk in chunked_uris:
             resp = self.get_request(url='albums', ids=','.join([i.object_id for i in chunk]))
             if resp:
-                albums += [AlbumFull(**i) for i in resp.get('albums', [])]
+                albums += [init_with_key_filter(AlbumFull, i) for i in resp.get('albums', [])]
 
         return albums
 
-    def get_album(self, uri: Uri = None, uri_string: str = None) -> Optional[AlbumFull]:
+    @inject_uri(uris=False)
+    def get_album(self, uri: Uri) -> Optional[AlbumFull]:
 
-        if uri is None and uri_string is None:
-            raise NameError('no uri provided')
-
-        if uri_string is not None:
-            uri = Uri(uri_string)
-
-        album = self.get_albums([uri])
+        album = self.get_albums(uris=[uri])
         if len(album) == 1:
             return album[0]
         else:
             return None
 
-    def get_artists(self, uris: List[Uri] = None, uri_strings: List[str] = None) -> List[ArtistFull]:
-
-        if uris is None and uri_strings is None:
-            raise NameError('no uris provided')
-
-        if uri_strings is not None:
-            uris = [Uri(i) for i in uri_strings]
+    @inject_uri(uri=False)
+    def get_artists(self, uris) -> List[ArtistFull]:
 
         logger.info(f'getting {len(uris)} artists')
 
@@ -867,19 +823,14 @@ class Network:
         for chunk in chunked_uris:
             resp = self.get_request(url='artists', ids=','.join([i.object_id for i in chunk]))
             if resp:
-                artists += [ArtistFull(**i) for i in resp.get('artists', [])]
+                artists += [init_with_key_filter(ArtistFull, i) for i in resp.get('artists', [])]
 
         return artists
 
-    def get_artist(self, uri: Uri = None, uri_string: str = None) -> Optional[ArtistFull]:
+    @inject_uri(uris=False)
+    def get_artist(self, uri) -> Optional[ArtistFull]:
 
-        if uri is None and uri_string is None:
-            raise NameError('no uri provided')
-
-        if uri_string is not None:
-            uri = Uri(uri_string)
-
-        artist = self.get_artists([uri])
+        artist = self.get_artists(uris=[uri])
         if len(artist) == 1:
             return artist[0]
         else:
@@ -914,10 +865,10 @@ class Network:
                                 type=','.join([i.name for i in query_types]),
                                 limit=response_limit)
 
-        albums = [SimplifiedAlbum(**i) for i in resp.get('albums', {}).get('items', [])]
-        artists = [ArtistFull(**i) for i in resp.get('artists', {}).get('items', [])]
-        tracks = [TrackFull(**i) for i in resp.get('tracks', {}).get('items', [])]
-        playlists = [SimplifiedPlaylist(**i) for i in resp.get('playlists', {}).get('items', [])]
+        albums = [init_with_key_filter(SimplifiedAlbum, i) for i in resp.get('albums', {}).get('items', [])]
+        artists = [init_with_key_filter(ArtistFull, i) for i in resp.get('artists', {}).get('items', [])]
+        tracks = [init_with_key_filter(TrackFull, i) for i in resp.get('tracks', {}).get('items', [])]
+        playlists = [init_with_key_filter(SimplifiedPlaylist, i) for i in resp.get('playlists', {}).get('items', [])]
 
         return SearchResponse(tracks=tracks, albums=albums, artists=artists, playlists=playlists)
 
@@ -996,7 +947,7 @@ class PageCollection:
                 self.iterate(page.next)
 
     def add_page(self, page_dict):
-        page = Page(**page_dict)
+        page = init_with_key_filter(Page, page_dict)
         self.pages.append(page)
         return page
 

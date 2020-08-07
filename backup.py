@@ -35,7 +35,7 @@ if __name__ == '__main__':
 
         for playlist in playlists:
             try:
-                playlist.tracks = network.get_playlist_tracks(playlist.uri)
+                playlist.tracks = network.get_playlist_tracks(uri=playlist.uri)
                 csvwrite.export_playlist(playlist, totalpath)
             except SpotifyNetworkException:
                 logger.exception(f'error occured during {playlist.name} track retrieval')

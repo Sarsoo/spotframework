@@ -9,6 +9,8 @@ class Uri:
         artist = 3
         user = 4
         playlist = 5
+        episode = 6
+        show = 7
 
     def __init__(self, input_string: str):
         self.object_type = None

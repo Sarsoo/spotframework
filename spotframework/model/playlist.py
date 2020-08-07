@@ -3,6 +3,7 @@ from spotframework.model.user import PublicUser
 from spotframework.model.track import TrackFull, PlaylistTrack
 from spotframework.model.uri import Uri
 from spotframework.model.service import Image
+from spotframework.model import init_with_key_filter
 from tabulate import tabulate
 from typing import List, Union
 import logging
@@ -39,10 +40,10 @@ class SimplifiedPlaylist:
                 raise TypeError('provided uri not for a playlist')
 
         if all((isinstance(i, dict) for i in self.images)):
-            self.images = [Image(**i) for i in self.images]
+            self.images = [init_with_key_filter(Image, i) for i in self.images]
 
         if isinstance(self.owner, dict):
-            self.owner = PublicUser(**self.owner)
+            self.owner = init_with_key_filter(PublicUser, self.owner)
 
     def has_tracks(self) -> bool:
         return bool(len(self.tracks) > 0)
@@ -131,10 +132,10 @@ class FullPlaylist(SimplifiedPlaylist):
                 raise TypeError('provided uri not for a playlist')
 
         if all((isinstance(i, dict) for i in self.images)):
-            self.images = [Image(**i) for i in self.images]
+            self.images = [init_with_key_filter(Image, i) for i in self.images]
 
         if isinstance(self.owner, dict):
-            self.owner = PublicUser(**self.owner)
+            self.owner = init_with_key_filter(PublicUser, self.owner)
 
     def __str__(self):
         prefix = f'\n==={self.name}===\n\n' if self.name is not None else ''

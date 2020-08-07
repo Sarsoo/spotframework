@@ -145,9 +145,10 @@ class PlaylistEngine:
                         counter_track = track
 
             if counter_track != tracks_to_sort[0]:
-                self.net.reorder_playlist_tracks(playlist.uri,
-                                                 i + tracks_to_sort.index(counter_track),
-                                                 1, i)
+                self.net.reorder_playlist_tracks(uri=playlist.uri,
+                                                 range_start=i + tracks_to_sort.index(counter_track),
+                                                 range_length=1,
+                                                 insert_before=i)
             tracks_to_sort.remove(counter_track)
 
     def execute_playlist(self,
@@ -179,7 +180,7 @@ class PlaylistEngine:
             logger.error('no string generated')
             return None
 
-        resp = self.net.change_playlist_details(uri, description=string)
+        resp = self.net.change_playlist_details(uri=uri, description=string)
         if resp:
             return resp
         else:
@@ -230,7 +231,7 @@ class PlaylistSource(TrackSource):
                             playlist: FullPlaylist) -> None:
         logger.info(f"pulling tracks for {playlist.name}")
 
-        tracks = self.net.get_playlist_tracks(playlist.uri)
+        tracks = self.net.get_playlist_tracks(uri=playlist.uri)
         if tracks and len(tracks) > 0:
             playlist.tracks = tracks
         else:
@@ -263,7 +264,7 @@ class PlaylistSource(TrackSource):
             if playlist:
                 playlists.append(playlist)
             else:
-                playlist = self.net.get_playlist(uri)
+                playlist = self.net.get_playlist(uri=uri)
                 if playlist:
                     playlists.append(playlist)
                     self.playlists.append(playlist)

@@ -2,6 +2,7 @@ from typing import Union, List
 from dataclasses import dataclass, field
 from spotframework.model.uri import Uri
 from spotframework.model.service import Image
+from spotframework.model import init_with_key_filter
 
 
 @dataclass
@@ -26,7 +27,7 @@ class PublicUser:
                 raise TypeError('provided uri not for a user')
 
         if all((isinstance(i, dict) for i in self.images)):
-            self.images = [Image(**i) for i in self.images]
+            self.images = [init_with_key_filter(Image, i) for i in self.images]
 
     def __str__(self):
         return f'{self.id}'
@@ -47,5 +48,5 @@ class PrivateUser(PublicUser):
                 raise TypeError('provided uri not for a user')
 
         if all((isinstance(i, dict) for i in self.images)):
-            self.images = [Image(**i) for i in self.images]
+            self.images = [init_with_key_filter(Image, i) for i in self.images]
 

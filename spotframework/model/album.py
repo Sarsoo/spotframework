@@ -3,11 +3,15 @@ from enum import Enum
 from dataclasses import dataclass
 from datetime import datetime
 from typing import List, Union
+import logging
 from spotframework.model.uri import Uri
 import spotframework.model.artist
 import spotframework.model.service
 import spotframework.model.track
 
+from spotframework.model import init_with_key_filter
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class SimplifiedAlbum:
@@ -39,14 +43,14 @@ class SimplifiedAlbum:
             self.uri = Uri(self.uri)
 
         if self.uri:
-            if self.uri.object_type != Uri.ObjectType.album:
+            if self.uri.object_type not in [Uri.ObjectType.album, Uri.ObjectType.show]:
                 raise TypeError('provided uri not for an album')
 
         if all((isinstance(i, dict) for i in self.artists)):
-            self.artists = [spotframework.model.artist.SimplifiedArtist(**i) for i in self.artists]
+            self.artists = [init_with_key_filter(spotframework.model.artist.SimplifiedArtist, i) for i in self.artists]
 
         if all((isinstance(i, dict) for i in self.images)):
-            self.images = [spotframework.model.service.Image(**i) for i in self.images]
+            self.images = [init_with_key_filter(spotframework.model.service.Image, i) for i in self.images]
 
         if isinstance(self.release_date, str):
             if self.release_date_precision == 'year':
@@ -55,6 +59,11 @@ class SimplifiedAlbum:
                 self.release_date = datetime.strptime(self.release_date, '%Y-%m')
             elif self.release_date_precision == 'day':
                 self.release_date = datetime.strptime(self.release_date, '%Y-%m-%d')
+            else:
+                logger.error(f'invalid release date type {self.release_date_precision} - {self.release_date}')
+
+        elif self.release_date is None and self.release_date_precision is None: # for podcasts
+            self.release_date = datetime(year=1900, month=1, day=1)
 
     @property
     def artists_names(self) -> str:
@@ -82,33 +91,10 @@ class AlbumFull(SimplifiedAlbum):
     tracks: List[spotframework.model.track.SimplifiedTrack] = None
 
     def __post_init__(self):
-
-        if isinstance(self.album_type, str):
-            self.album_type = SimplifiedAlbum.Type[self.album_type]
-
-        if isinstance(self.uri, str):
-            self.uri = Uri(self.uri)
-
-        if self.uri:
-            if self.uri.object_type != Uri.ObjectType.album:
-                raise TypeError('provided uri not for an album')
-
-        if all((isinstance(i, dict) for i in self.artists)):
-            self.artists = [spotframework.model.artist.SimplifiedArtist(**i) for i in self.artists]
-
-        if all((isinstance(i, dict) for i in self.images)):
-            self.images = [spotframework.model.service.Image(**i) for i in self.images]
+        super().__post_init__()
 
         if all((isinstance(i, dict) for i in self.tracks)):
-            self.tracks = [spotframework.model.track.SimplifiedTrack(**i) for i in self.tracks]
-
-        if isinstance(self.release_date, str):
-            if self.release_date_precision == 'year':
-                self.release_date = datetime.strptime(self.release_date, '%Y')
-            elif self.release_date_precision == 'month':
-                self.release_date = datetime.strptime(self.release_date, '%Y-%m')
-            elif self.release_date_precision == 'day':
-                self.release_date = datetime.strptime(self.release_date, '%Y-%m-%d')
+            self.tracks = [init_with_key_filter(spotframework.model.track.SimplifiedTrack, i) for i in self.tracks]
 
 
 @dataclass
@@ -118,7 +104,7 @@ class LibraryAlbum:
 
     def __post_init__(self):
         if isinstance(self.album, dict):
-            self.album = AlbumFull(**self.album)
+            self.album = init_with_key_filter(AlbumFull, self.album)
 
         if isinstance(self.added_at, str):
             self.added_at = datetime.strptime(self.added_at, '%Y-%m-%dT%H:%M:%S%z')
