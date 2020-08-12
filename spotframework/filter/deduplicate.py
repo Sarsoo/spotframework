@@ -12,7 +12,7 @@ def deduplicate_by_id(tracks: List, include_malformed=True) -> List:
     prop = 'uri'
 
     return_tracks = []
-    for inner_track, whole_track in zip(*get_track_objects(tracks)):
+    for inner_track, whole_track in get_track_objects(tracks):
         if hasattr(inner_track, prop) and isinstance(getattr(inner_track, prop), Uri):
             if getattr(inner_track, prop) not in [getattr(i, prop) for i in return_tracks]:
                 return_tracks.append(whole_track)
@@ -26,11 +26,11 @@ def deduplicate_by_id(tracks: List, include_malformed=True) -> List:
 def deduplicate_by_name(tracks: List, include_malformed=True) -> List:
     return_tracks = []
 
-    for inner_track, whole_track in zip(*get_track_objects(tracks)):
+    for inner_track, whole_track in get_track_objects(tracks):
         if isinstance(inner_track, TrackFull):
             to_check_artists = [i.name.lower() for i in inner_track.artists]
 
-            for index, (_inner_track, _whole_track) in enumerate(zip(*get_track_objects(return_tracks))):
+            for index, (_inner_track, _whole_track) in enumerate(get_track_objects(return_tracks)):
                 if inner_track.name.lower() == _inner_track.name.lower():
 
                     _track_artists = [i.name.lower() for i in _inner_track.artists]

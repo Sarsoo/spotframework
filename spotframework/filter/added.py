@@ -1,35 +1,36 @@
 import logging
-from typing import List
+from typing import Generator, Union, List
 from datetime import datetime
+
+from spotframework.model.track import PlaylistTrack, LibraryTrack
 
 logger = logging.getLogger(__name__)
 
 
-def added_before(tracks: List, boundary: datetime, include_malformed=True) -> List:
+def added_before(tracks: List, boundary: datetime, include_malformed=True) -> Generator[Union[PlaylistTrack,
+                                                                                              LibraryTrack],
+                                                                                        None, None]:
     prop = 'added_at'
 
-    return_tracks = []
     for track in tracks:
         if hasattr(track, prop) and isinstance(getattr(track, prop), datetime):
             if getattr(track, prop) < boundary:
-                return_tracks.append(track)
+                yield track
         else:
             if include_malformed:
-                return_tracks.append(track)
-
-    return return_tracks
+                yield track
 
 
-def added_after(tracks: List, boundary: datetime, include_malformed=True) -> List:
+
+def added_after(tracks: List, boundary: datetime, include_malformed=True) -> Generator[Union[PlaylistTrack,
+                                                                                              LibraryTrack],
+                                                                                        None, None]:
     prop = 'added_at'
 
-    return_tracks = []
     for track in tracks:
         if hasattr(track, prop) and isinstance(getattr(track, prop), datetime):
             if getattr(track, prop) > boundary:
-                return_tracks.append(track)
+                yield track
         else:
             if include_malformed:
-                return_tracks.append(track)
-
-    return return_tracks
+                yield track

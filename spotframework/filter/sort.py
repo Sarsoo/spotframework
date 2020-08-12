@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 def sort_by_popularity(tracks: List, reverse: bool = False) -> List:
     prop = 'popularity'
     return [j for i, j
-            in sorted([(k, l) for k, l in zip(*get_track_objects(tracks))
+            in sorted([(k, l) for k, l in get_track_objects(tracks)
                        if hasattr(k, prop) and isinstance(getattr(k, prop), int)],
                       key=lambda x: x[0].popularity, reverse=reverse
                       )
@@ -38,7 +38,7 @@ def sort_by_added_date(tracks: List, reverse: bool = False) -> List:
 
 
 def sort_artist_album_track_number(tracks: List, inner_tracks_only: bool = False) -> List:
-    sorted_tracks = sorted([(i, w) for i, w in zip(*get_track_objects(tracks))
+    sorted_tracks = sorted([(i, w) for i, w in get_track_objects(tracks)
                             if hasattr(i, 'album') and isinstance(getattr(i, 'album'), SimplifiedAlbum)],
                            key=lambda x: (x[0].album.artists[0].name.lower(),
                                           x[0].album.name.lower(),

@@ -22,7 +22,7 @@ class Listener:
         self.prev_now_playing: Optional[CurrentlyPlaying] = None
         self.now_playing = None
         try:
-            self.now_playing: Optional[CurrentlyPlaying] = net.get_player()
+            self.now_playing: Optional[CurrentlyPlaying] = net.player()
         except SpotifyNetworkException:
             logger.exception(f'error occured retrieving currently playing')
 
@@ -33,7 +33,7 @@ class Listener:
         logger.debug('updating now playing')
 
         try:
-            live_now_playing = self.net.get_player()
+            live_now_playing = self.net.player()
             if self.now_playing is None and live_now_playing is None:
                 return
 
@@ -53,7 +53,7 @@ class Listener:
         logger.debug('updating recent tracks')
 
         try:
-            tracks = self.net.get_recently_played_tracks(response_limit=self.request_size)
+            tracks = self.net.recently_played_tracks(response_limit=self.request_size)
             for track in tracks:
                 if track.played_at not in [i.played_at for i in self.recent_tracks]:
                     self.recent_tracks.append(track)

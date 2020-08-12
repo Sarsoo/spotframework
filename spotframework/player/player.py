@@ -56,7 +56,7 @@ class Player:
     @property
     def available_devices(self):
         try:
-            return self.net.get_available_devices()
+            return self.net.available_devices()
         except SpotifyNetworkException as e:
             logger.exception(f'error retrieving current devices')
             raise e
@@ -64,7 +64,7 @@ class Player:
     @property
     def status(self):
         try:
-            new_status = self.net.get_player()
+            new_status = self.net.player()
             if new_status:
                 self.last_status = new_status
                 return self.last_status
@@ -164,9 +164,9 @@ class Player:
             if isinstance(state, bool):
                 try:
                     if device is not None:
-                        self.net.set_shuffle(deviceid=device.id, state=state)
+                        self.net.shuffle(deviceid=device.id, state=state)
                     else:
-                        self.net.set_shuffle(state=state)
+                        self.net.shuffle(state=state)
 
                 except SpotifyNetworkException:
                     logger.exception(f'error setting shuffle')
@@ -183,9 +183,9 @@ class Player:
         if 0 <= int(value) <= 100:
             try:
                 if device is not None:
-                    self.net.set_volume(value, deviceid=device.id)
+                    self.net.volume(value, deviceid=device.id)
                 else:
-                    self.net.set_volume(value)
+                    self.net.volume(value)
             except SpotifyNetworkException:
                 logger.exception(f'error setting volume to {value}')
         else:

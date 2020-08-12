@@ -31,11 +31,11 @@ if __name__ == '__main__':
                                   refresh_token=os.environ['SPOT_REFRESH'])).refresh_access_token()
 
     try:
-        playlists = network.get_user_playlists()
+        playlists = network.user_playlists()
 
         for playlist in playlists:
             try:
-                playlist.tracks = network.get_playlist_tracks(uri=playlist.uri)
+                playlist.tracks = network.playlist_tracks(uri=playlist.uri)
                 csvwrite.export_playlist(playlist, totalpath)
             except SpotifyNetworkException:
                 logger.exception(f'error occured during {playlist.name} track retrieval')

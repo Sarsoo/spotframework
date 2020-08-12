@@ -221,7 +221,7 @@ class PlaylistSource(TrackSource):
     def append_user_playlists(self) -> None:
         logger.info('appending user playlists')
 
-        playlists = self.net.get_playlists()
+        playlists = self.net.playlists()
         if playlists and len(playlists) > 0:
             self.playlists += playlists
         else:
@@ -231,7 +231,7 @@ class PlaylistSource(TrackSource):
                             playlist: FullPlaylist) -> None:
         logger.info(f"pulling tracks for {playlist.name}")
 
-        tracks = self.net.get_playlist_tracks(uri=playlist.uri)
+        tracks = self.net.playlist_tracks(uri=playlist.uri)
         if tracks and len(tracks) > 0:
             playlist.tracks = tracks
         else:
@@ -240,7 +240,7 @@ class PlaylistSource(TrackSource):
     def load(self) -> None:
         logger.info('loading user playlists')
 
-        playlists = self.net.get_playlists()
+        playlists = self.net.playlists()
         if playlists and len(playlists) > 0:
             self.playlists = playlists
         else:
@@ -264,7 +264,7 @@ class PlaylistSource(TrackSource):
             if playlist:
                 playlists.append(playlist)
             else:
-                playlist = self.net.get_playlist(uri=uri)
+                playlist = self.net.playlist(uri=uri)
                 if playlist:
                     playlists.append(playlist)
                     self.playlists.append(playlist)
@@ -306,7 +306,7 @@ class LibraryTrackSource(TrackSource):
     def load(self) -> None:
         logger.info('loading library tracks')
 
-        tracks = self.net.get_library_tracks()
+        tracks = self.net.saved_tracks()
         if tracks and len(tracks) > 0:
             self.tracks = tracks
         else:
@@ -361,9 +361,9 @@ class RecommendationSource(TrackSource):
 
         if len(query_uris) > 0:
 
-            recommendations = self.net.get_recommendations(tracks=[i.object_id for i in query_uris
-                                                                   if i.object_type == Uri.ObjectType.track],
-                                                           response_limit=params.recommendation_limit)
+            recommendations = self.net.recommendations(tracks=[i.object_id for i in query_uris
+                                                               if i.object_type == Uri.ObjectType.track],
+                                                       response_limit=params.recommendation_limit)
             if recommendations and len(recommendations) > 0:
                 pass
             else:

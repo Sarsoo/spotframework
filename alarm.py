@@ -59,7 +59,7 @@ if __name__ == '__main__':
 
                 date = datetime.datetime.now()
 
-                playlists = network.get_user_playlists()
+                playlists = network.user_playlists()
 
                 if data['alarm']['use_month']:
                     playlisturi = next((i.uri for i in playlists if i.name == month.get_this_month()),
@@ -67,10 +67,10 @@ if __name__ == '__main__':
                 else:
                     playlisturi = data['alarm']['uri']
 
-                network.play(uri=playlisturi, deviceid=network.get_device_id(data['alarm']['device_name']))
+                network.play(uri=playlisturi, deviceid=network.map_device_name_to_id(data['alarm']['device_name']))
 
-                network.set_shuffle(True)
-                network.set_volume(data['alarm']['volume'])
+                network.shuffle(True)
+                network.volume(data['alarm']['volume'])
                 network.next()
 
     except Exception as e:

@@ -248,13 +248,13 @@ class Network:
         return self
 
     def refresh_user_info(self):
-        self.user.user = self.get_current_user()
+        self.user.user = self.current_user()
 
     @inject_uri(uris=False)
     @uri_type_check(uri_type=Uri.ObjectType.playlist)
-    def get_playlist(self,
-                     uri: Uri,
-                     tracks: bool = True) -> FullPlaylist:
+    def playlist(self,
+                 uri: Uri,
+                 tracks: bool = True) -> FullPlaylist:
         """get playlist object with tracks for uri
 
         :param uri: target request uri
@@ -310,7 +310,7 @@ class Network:
                                 description=description)
         return init_with_key_filter(FullPlaylist, req)
 
-    def get_playlists(self, response_limit: int = None) -> Optional[List[SimplifiedPlaylist]]:
+    def playlists(self, response_limit: int = None) -> Optional[List[SimplifiedPlaylist]]:
         """get current users playlists
 
         :param response_limit: max playlists to return
@@ -331,7 +331,7 @@ class Network:
 
         return return_items
 
-    def get_library_albums(self, response_limit: int = None) -> Optional[List[LibraryAlbum]]:
+    def saved_albums(self, response_limit: int = None) -> Optional[List[LibraryAlbum]]:
         """get user library albums
 
         :param response_limit: max albums to return
@@ -352,7 +352,7 @@ class Network:
 
         return return_items
 
-    def get_library_tracks(self, response_limit: int = None) -> Optional[List[LibraryTrack]]:
+    def saved_tracks(self, response_limit: int = None) -> Optional[List[LibraryTrack]]:
         """get user library tracks
 
         :param response_limit: max tracks to return
@@ -373,7 +373,7 @@ class Network:
 
         return return_items
 
-    def get_user_playlists(self, response_limit: int = None) -> List[SimplifiedPlaylist]:
+    def user_playlists(self, response_limit: int = None) -> List[SimplifiedPlaylist]:
         """retrieve user owned playlists
 
         :param response_limit: max playlists to return
@@ -382,7 +382,7 @@ class Network:
 
         logger.info('pulling all playlists')
 
-        playlists = self.get_playlists(response_limit=response_limit)
+        playlists = self.playlists(response_limit=response_limit)
 
         if self.user.user is None:
             logger.debug('no user info, refreshing for filter')
@@ -395,9 +395,9 @@ class Network:
 
     @inject_uri(uris=False)
     @uri_type_check(uri_type=Uri.ObjectType.playlist)
-    def get_playlist_tracks(self,
-                            uri: Uri,
-                            response_limit: int = None) -> List[PlaylistTrack]:
+    def playlist_tracks(self,
+                        uri: Uri,
+                        response_limit: int = None) -> List[PlaylistTrack]:
         """get list of playlists tracks for uri
 
         :param uri: target playlist uri
@@ -421,9 +421,9 @@ class Network:
 
     @inject_uri(uris=False)
     @uri_type_check(uri_type=Uri.ObjectType.show)
-    def get_show_episodes(self,
-                          uri: Uri,
-                          response_limit: int = None) -> List[SimplifiedEpisode]:
+    def show_episodes(self,
+                      uri: Uri,
+                      response_limit: int = None) -> List[SimplifiedEpisode]:
         """get list of shows episodes for uri
 
         :param uri: target show uri
@@ -445,7 +445,7 @@ class Network:
 
         return return_items
 
-    def get_available_devices(self) -> List[Device]:
+    def available_devices(self) -> List[Device]:
         """get users available devices"""
 
         logger.info("polling available devices")
@@ -456,10 +456,10 @@ class Network:
             logger.error('no devices returned')
         return [init_with_key_filter(Device, i) for i in resp['devices']]
 
-    def get_recently_played_tracks(self,
-                                   response_limit: int = None,
-                                   after: datetime.datetime = None,
-                                   before: datetime.datetime = None) -> Optional[List[PlayedTrack]]:
+    def recently_played_tracks(self,
+                               response_limit: int = None,
+                               after: datetime.datetime = None,
+                               before: datetime.datetime = None) -> Optional[List[PlayedTrack]]:
         """get list of recently played tracks
 
         :param response_limit: max number of tracks to return
@@ -489,7 +489,7 @@ class Network:
 
         return [init_with_key_filter(PlayedTrack, i) for i in pager.items]
 
-    def get_player(self) -> CurrentlyPlaying:
+    def player(self) -> CurrentlyPlaying:
         """get currently playing snapshot (player)"""
 
         logger.info("polling player")
@@ -497,7 +497,7 @@ class Network:
         resp = self.get_request('me/player')
         return init_with_key_filter(CurrentlyPlaying, resp)
 
-    def get_device_id(self, device_name: str) -> Optional[str]:
+    def map_device_name_to_id(self, device_name: str) -> Optional[str]:
         """return device id of device as searched for by name
 
         :param device_name: target device name
@@ -506,14 +506,14 @@ class Network:
 
         logger.info(f"querying {device_name}")
 
-        devices = self.get_available_devices()
+        devices = self.available_devices()
         device = next((i for i in devices if i.name == device_name), None)
         if device:
             return device.id
         else:
             logger.error(f'{device_name} not found')
 
-    def get_current_user(self) -> PublicUser:
+    def current_user(self) -> PublicUser:
         logger.info(f"getting current user")
 
         resp = self.get_request('me')
@@ -586,7 +586,7 @@ class Network:
 
         self.post_request('me/player/previous', params=params)
 
-    def set_shuffle(self, state: bool, deviceid: str = None):
+    def shuffle(self, state: bool, deviceid: str = None):
 
         logger.info(f"{state}{' ' + deviceid if deviceid is not None else ''}")
 
@@ -597,7 +597,7 @@ class Network:
 
         return self.put_request('me/player/shuffle', params=params)
 
-    def set_volume(self, volume: int, deviceid: str = None):
+    def volume(self, volume: int, deviceid: str = None):
 
         logger.info(f"{volume}{' ' + deviceid if deviceid is not None else ''}")
 
@@ -662,10 +662,10 @@ class Network:
 
         return snapshot_ids
 
-    def get_recommendations(self,
-                            tracks: List[str] = None,
-                            artists: List[str] = None,
-                            response_limit=10) -> Optional[Recommendations]:
+    def recommendations(self,
+                        tracks: List[str] = None,
+                        artists: List[str] = None,
+                        response_limit=10) -> Optional[Recommendations]:
 
         logger.info(f'getting {response_limit} recommendations, '
                     f'tracks: {len(tracks) if tracks is not None else 0}, '
@@ -739,7 +739,7 @@ class Network:
 
     @inject_uri(uri=False)
     @uri_type_check(uris_type=Uri.ObjectType.track)
-    def get_track_audio_features(self, uris: List[Uri]) -> Optional[List[AudioFeatures]]:
+    def track_audio_features(self, uris: List[Uri]) -> Optional[List[AudioFeatures]]:
         logger.info(f'getting {len(uris)} features')
 
         audio_features = []
@@ -761,7 +761,7 @@ class Network:
         logger.info(f'populating {len(tracks)} features')
 
         if isinstance(tracks, SimplifiedTrack):
-            audio_features = self.get_track_audio_features(uris=[tracks.uri])
+            audio_features = self.track_audio_features(uris=[tracks.uri])
 
             if audio_features:
                 if len(audio_features) == 1:
@@ -774,7 +774,7 @@ class Network:
 
         elif isinstance(tracks, List):
             if all(isinstance(i, SimplifiedTrack) for i in tracks):
-                audio_features = self.get_track_audio_features(uris=[i.uri for i in tracks])
+                audio_features = self.track_audio_features(uris=[i.uri for i in tracks])
 
                 if audio_features:
                     if len(audio_features) != len(tracks):
@@ -791,7 +791,7 @@ class Network:
 
     @inject_uri(uri=False)
     @uri_type_check(uris_type=Uri.ObjectType.track)
-    def get_tracks(self, uris: List[Uri]) -> List[TrackFull]:
+    def tracks(self, uris: List[Uri]) -> List[TrackFull]:
 
         logger.info(f'getting {len(uris)} tracks')
 
@@ -806,9 +806,9 @@ class Network:
 
     @inject_uri(uris=False)
     @uri_type_check(uri_type=Uri.ObjectType.track)
-    def get_track(self, uri) -> Optional[TrackFull]:
+    def track(self, uri) -> Optional[TrackFull]:
 
-        track = self.get_tracks(uris=[uri])
+        track = self.tracks(uris=[uri])
         if len(track) == 1:
             return track[0]
         else:
@@ -816,7 +816,7 @@ class Network:
 
     @inject_uri(uri=False)
     @uri_type_check(uris_type=Uri.ObjectType.album)
-    def get_albums(self, uris: List[Uri]) -> List[AlbumFull]:
+    def albums(self, uris: List[Uri]) -> List[AlbumFull]:
 
         logger.info(f'getting {len(uris)} albums')
 
@@ -831,9 +831,9 @@ class Network:
 
     @inject_uri(uris=False)
     @uri_type_check(uri_type=Uri.ObjectType.album)
-    def get_album(self, uri: Uri) -> Optional[AlbumFull]:
+    def album(self, uri: Uri) -> Optional[AlbumFull]:
 
-        album = self.get_albums(uris=[uri])
+        album = self.albums(uris=[uri])
         if len(album) == 1:
             return album[0]
         else:
@@ -841,7 +841,7 @@ class Network:
 
     @inject_uri(uri=False)
     @uri_type_check(uris_type=Uri.ObjectType.artist)
-    def get_artists(self, uris) -> List[ArtistFull]:
+    def artists(self, uris) -> List[ArtistFull]:
 
         logger.info(f'getting {len(uris)} artists')
 
@@ -856,9 +856,9 @@ class Network:
 
     @inject_uri(uris=False)
     @uri_type_check(uri_type=Uri.ObjectType.artist)
-    def get_artist(self, uri) -> Optional[ArtistFull]:
+    def artist(self, uri) -> Optional[ArtistFull]:
 
-        artist = self.get_artists(uris=[uri])
+        artist = self.artists(uris=[uri])
         if len(artist) == 1:
             return artist[0]
         else:
@@ -866,7 +866,7 @@ class Network:
 
     @inject_uri(uri=False)
     @uri_type_check(uris_type=Uri.ObjectType.show)
-    def get_shows(self, uris) -> List[SimplifiedShow]:
+    def shows(self, uris) -> List[SimplifiedShow]:
 
         logger.info(f'getting {len(uris)} shows')
 
@@ -881,7 +881,7 @@ class Network:
 
     @inject_uri(uris=False)
     @uri_type_check(uri_type=Uri.ObjectType.show)
-    def get_show(self, uri, episodes: bool = True) -> Optional[ShowFull]:
+    def show(self, uri, episodes: bool = True) -> Optional[ShowFull]:
 
         logger.info(f"retrieving {uri}")
 
@@ -903,7 +903,7 @@ class Network:
 
     @inject_uri(uri=False)
     @uri_type_check(uris_type=Uri.ObjectType.episode)
-    def get_episodes(self, uris) -> List[EpisodeFull]:
+    def episodes(self, uris) -> List[EpisodeFull]:
 
         logger.info(f'getting {len(uris)} episodes')
 
@@ -918,7 +918,7 @@ class Network:
 
     @inject_uri(uris=False)
     @uri_type_check(uri_type=Uri.ObjectType.episode)
-    def get_episode(self, uri) -> EpisodeFull:
+    def episode(self, uri) -> EpisodeFull:
 
         logger.info(f"retrieving {uri}")
 
