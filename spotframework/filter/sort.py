@@ -42,6 +42,7 @@ def sort_artist_album_track_number(tracks: List, inner_tracks_only: bool = False
                             if hasattr(i, 'album') and isinstance(getattr(i, 'album'), SimplifiedAlbum)],
                            key=lambda x: (x[0].album.artists[0].name.lower(),
                                           x[0].album.name.lower(),
+                                          x[0].disc_number,
                                           x[0].track_number))
     if inner_tracks_only:
         return [i for i, w in sorted_tracks]
