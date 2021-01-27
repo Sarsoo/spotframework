@@ -4,5 +4,6 @@ __pycache__
 .idea
 .spot
 data
+poetry.lock
 
 scratch.py
