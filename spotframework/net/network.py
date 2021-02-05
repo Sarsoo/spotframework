@@ -774,7 +774,10 @@ class Network:
 
         elif isinstance(tracks, List):
             if all(isinstance(i, SimplifiedTrack) for i in tracks):
-                audio_features = self.track_audio_features(uris=[i.uri for i in tracks])
+                
+                audio_features = list()
+                for chunk in self.chunk(tracks, 100):
+                    audio_features += self.track_audio_features(uris=[i.uri for i in chunk])
 
                 if audio_features:
                     if len(audio_features) != len(tracks):

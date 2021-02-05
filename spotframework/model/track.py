@@ -204,7 +204,6 @@ class AudioFeatures:
             'uri': str(self.uri) if self.uri is not None else None,
             'instrumentalness': self.instrumentalness,
             'key': self.key,
-            'key_code': self._key,
             'liveness': self.liveness,
             'loudness': self.loudness,
             'mode': self.mode.value,

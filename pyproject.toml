@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "spotframework"
-version = "1.0.0"
+version = "1.0.1"
 description = "Spotify HTTP wrapper library"
 authors = ["andy <andy@sarsoo.xyz>"]
 repository = "https://github.com/Sarsoo/spotframework"
@@ -13,6 +13,10 @@ click = "^7.1.2"
 
 [tool.poetry.dev-dependencies]
 pylint = "2.5.3"
+
+[tool.poetry.scripts]
+test = 'scripts:test'
+testv = 'scripts:testv'
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
