@@ -22,9 +22,7 @@ def get_track_objects(tracks: List) -> Generator[Tuple[SimplifiedTrack, Union[Si
                                                                               PlayedTrack,
                                                                               LibraryTrack]], None, None]:
     for track in tracks:
-        if isinstance(track, SimplifiedTrack):
-            yield track, track
-        elif isinstance(track, (PlaylistTrack, PlayedTrack, LibraryTrack)):
+        if hasattr(track, 'track'):
             yield track.track, track
         else:
-            logger.warning(f'invalid type found for {track} ({type(track)}), discarding')
+            yield track, track

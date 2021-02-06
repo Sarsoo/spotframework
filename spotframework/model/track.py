@@ -36,7 +36,7 @@ class SimplifiedTrack:
     is_local: bool
     is_playable: bool = None
     episode: bool = None
-    track: bool = None
+    # track: bool = None
 
     def __post_init__(self):
         if isinstance(self.uri, str):
