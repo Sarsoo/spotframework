@@ -1,6 +1,8 @@
 spotframework
 ===============
 
+![Python Tests](https://github.com/sarsoo/spotframework/workflows/Tests/badge.svg)
+
 *scripting framework for interacting with the spotify web api*
 
 * **alarm**
