@@ -2,7 +2,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def init_with_key_filter(class_type: type, dict_obj: dict = None, merge_unrecognised_keys: bool = True, **kwargs):
+def init_with_key_filter(class_type: type, dict_obj: dict = None, merge_unrecognised_keys: bool = False, **kwargs):
 
     if '__dataclass_fields__' not in class_type.__dict__:
         logger.error(f'{class_type} not a dataclass')
@@ -18,7 +18,7 @@ def init_with_key_filter(class_type: type, dict_obj: dict = None, merge_unrecogn
             filtered_dict[i] = j
         else:
             unrecognised_keys[i] = j
-            logger.warning(f'unrecognised key found for {class_type}: {i} {type(j)}')
+            logger.debug(f'unrecognised key found for {class_type}: {i} {type(j)}')
 
     obj = class_type(**filtered_dict)
 
