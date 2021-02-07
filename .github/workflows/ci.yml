@@ -1,11 +1,5 @@
 name: Tests
-on:
-  push:
-    branches:
-      - master
-  pull_request:
-    branches:
-      - master
+on: [push, pull_request]
 
 jobs:
   build:
@@ -17,14 +11,20 @@ jobs:
         os: [ubuntu-20.04, ubuntu-18.04, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v2 # get source
+
       - name: Install Python 3
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install Poetry
+
+      - name: Install Poetry # dependency management
         uses: abatilo/actions-poetry@v2.1.0
         with:
           poetry-version: ${{ matrix.poetry-version }}
-      - name: Run tests with pytest
-        run: poetry run test 
+
+      - name: Install Dependencies
+        run: poetry install
+
+      - name: Run tests with pytest # test script
+        run: poetry run python -m unittest discover -s tests

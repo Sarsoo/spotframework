@@ -51,6 +51,16 @@ class TestURI(unittest.TestCase):
 
         self.assertNotEqual(uri_one, uri_two)
 
+    def test_str(self):
+        uri = Uri("spotify:track:test")
+
+        self.assertEqual(str(uri), "spotify:track:test")
+
+    def test_repr(self):
+        uri = Uri("spotify:track:test")
+
+        self.assertEqual(repr(uri), "URI: track / test")
+
 
 if __name__ == '__main__':
     unittest.main()
