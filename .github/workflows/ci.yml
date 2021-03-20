@@ -8,7 +8,7 @@ jobs:
       matrix:
         python-version: [3.8]
         poetry-version: [1.1.4]
-        os: [ubuntu-20.04, ubuntu-18.04, macos-latest, windows-latest]
+        os: [ubuntu-20.04, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2 # get source
@@ -26,5 +26,5 @@ jobs:
       - name: Install Dependencies
         run: poetry install
 
-      - name: Run tests with pytest # test script
+      - name: Run Tests # test script
         run: poetry run python -m unittest discover -s tests
