@@ -47,11 +47,23 @@ class SearchResponse:
     def all(self):
         return self.tracks + self.albums + self.artists + self.playlists
 
+def filter_response(dict_in, filtered_keys):
+    response = dict()
+    for i, j in dict_in.items():
+        if i not in filtered_keys:
+            if type(j) is dict:
+                response[i] = filter_response(j, filtered_keys)
+            else:
+                response[i] = j
+        else:
+            response[i] = None
+    return response
 
 class Network:
     """Network layer class for reading and manipulating spotify service"""
 
     api_root = 'https://api.spotify.com/v1/'
+    unneeded_keys = ['available_markets', 'copyrights', 'external_ids', 'external_urls', 'href', 'preview_url', 'restrictions']
 
     def __init__(self, user: NetworkUser):
         """Create network using NetworkUser containing credentials
@@ -397,7 +409,8 @@ class Network:
     @uri_type_check(uri_type=Uri.ObjectType.playlist)
     def playlist_tracks(self,
                         uri: Uri,
-                        response_limit: int = None) -> List[PlaylistTrack]:
+                        response_limit: int = None,
+                        reduced_mem: bool = False) -> List[PlaylistTrack]:
         """get list of playlists tracks for uri
 
         :param uri: target playlist uri
@@ -412,7 +425,12 @@ class Network:
             pager.total_limit = response_limit
         pager.iterate()
 
-        return_items = [init_with_key_filter(PlaylistTrack, i) for i in pager.items]
+        result = pager.items
+
+        if reduced_mem:
+            result = [filter_response(i, Network.unneeded_keys) for i in result]
+
+        return_items = [init_with_key_filter(PlaylistTrack, i) for i in result]
 
         if len(return_items) == 0:
             logger.error('no tracks returned')
