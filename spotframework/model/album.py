@@ -53,14 +53,18 @@ class SimplifiedAlbum:
             self.images = [init_with_key_filter(spotframework.model.service.Image, i) for i in self.images]
 
         if isinstance(self.release_date, str):
-            if self.release_date_precision == 'year':
-                self.release_date = datetime.strptime(self.release_date, '%Y')
-            elif self.release_date_precision == 'month':
-                self.release_date = datetime.strptime(self.release_date, '%Y-%m')
-            elif self.release_date_precision == 'day':
-                self.release_date = datetime.strptime(self.release_date, '%Y-%m-%d')
-            else:
-                logger.error(f'invalid release date type {self.release_date_precision} - {self.release_date}')
+            try:
+                if self.release_date_precision == 'year':
+                    self.release_date = datetime.strptime(self.release_date, '%Y')
+                elif self.release_date_precision == 'month':
+                    self.release_date = datetime.strptime(self.release_date, '%Y-%m')
+                elif self.release_date_precision == 'day':
+                    self.release_date = datetime.strptime(self.release_date, '%Y-%m-%d')
+                else:
+                    logger.error(f'invalid release date type {self.release_date_precision} - {self.release_date}')
+            except ValueError:
+                self.release_date = datetime(year=1900, month=1, day=1)
+                logger.error(f'failed to parse release date for album {self.uri} {self.name} {self.artists_names} {self.release_date_precision} - {self.release_date}')
 
         elif self.release_date is None and self.release_date_precision is None: # for podcasts
             self.release_date = datetime(year=1900, month=1, day=1)
