@@ -21,7 +21,7 @@ Script to pull all user created playlists and backup each to a separate csv file
 
 * **generate playlists**
 
-*obsolete since the creation of [Mixonomer](https://music.sarsoo.xyz)*
+*obsolete since the creation of [Mixonomer](https://mixonomer.sarsoo.xyz)*
 
 My spotify playlists are quite granular for different sub genres, this script takes groups of playlists and genereates one "super-playlist".
 took inspiriation from my main use of Paul Lamere's [smarter playlists](http://smarterplaylists.playlistmachinery.com/).
