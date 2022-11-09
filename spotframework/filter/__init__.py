@@ -22,7 +22,7 @@ def get_track_objects(tracks: List) -> Generator[Tuple[SimplifiedTrack, Union[Si
                                                                               PlayedTrack,
                                                                               LibraryTrack]], None, None]:
     for track in tracks:
-        if hasattr(track, 'track'):
+        if hasattr(track, 'track') and isinstance(track.track, SimplifiedTrack):
             yield track.track, track
         else:
             yield track, track

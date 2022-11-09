@@ -26,11 +26,11 @@ def deduplicate_by_id(tracks: List, include_malformed=True) -> List:
 def deduplicate_by_name(tracks: List, include_malformed=True) -> List:
     return_tracks = []
 
-    for inner_track, whole_track in get_track_objects(tracks):
+    for inner_track, whole_track in get_track_objects(tracks): # ITERATE THROUGH INPUT
         if isinstance(inner_track, TrackFull):
             to_check_artists = [i.name.lower() for i in inner_track.artists]
 
-            for index, (_inner_track, _whole_track) in enumerate(get_track_objects(return_tracks)):
+            for index, (_inner_track, _) in enumerate(get_track_objects(return_tracks)): # CHECK FOR DUPLICATES
                 if inner_track.name.lower() == _inner_track.name.lower():
 
                     _track_artists = [i.name.lower() for i in _inner_track.artists]
@@ -45,8 +45,7 @@ def deduplicate_by_name(tracks: List, include_malformed=True) -> List:
             else:
                 return_tracks.append(whole_track)  # NOT FOUND, ADD TO RETURN
 
-        else:
-            if include_malformed:
-                return_tracks.append(whole_track)
+        elif inner_track is not None and include_malformed:
+            return_tracks.append(whole_track)
 
     return return_tracks
