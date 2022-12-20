@@ -170,9 +170,12 @@ class Network:
                     logger.critical(f'{method} {url_path or whole_url} refresh token limit (5) reached')
 
             try:
-                error_json = response.json()["error"]
-                logger.error(f'{method} {response.status_code} {error_json["message"]}')
-                raise SpotifyNetworkException(http_code=response.status_code, message=error_json["message"])
+                error_json = response.json()
+                error_message = error_json.get("error", {}).get("message", error_json)
+
+                logger.error(f'{method} {response.status_code} {error_message}')
+                raise SpotifyNetworkException(http_code=response.status_code, message=error_message)
+
             except (KeyError, JSONDecodeError):
                 logger.error(f'{method} {response.status_code} no error object found')
                 raise SpotifyNetworkException(http_code=response.status_code, message=response.text)
