@@ -171,7 +171,10 @@ class Network:
 
             try:
                 error_json = response.json()
-                error_message = error_json.get("error", {}).get("message", error_json)
+                error_message = error_json.get("error", {})
+
+                if isinstance(error_message, dict):
+                    error_message = error_message.get("message", error_json)
 
                 logger.error(f'{method} {response.status_code} {error_message}')
                 raise SpotifyNetworkException(http_code=response.status_code, message=error_message)
