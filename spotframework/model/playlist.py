@@ -39,7 +39,7 @@ class SimplifiedPlaylist:
             if self.uri.object_type != Uri.ObjectType.playlist:
                 raise TypeError('provided uri not for a playlist')
 
-        if all((isinstance(i, dict) for i in self.images)):
+        if (images := getattr(self, "images")) and all((isinstance(i, dict) for i in images)):
             self.images = [init_with_key_filter(Image, i) for i in self.images]
 
         if isinstance(self.owner, dict):
