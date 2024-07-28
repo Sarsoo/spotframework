@@ -54,17 +54,11 @@ jobs:
         with:
           poetry-version: ${{ env.poetry-version }}
 
-      - name: Add SarGit Repo
-        run: |
-          cat <<EOF > ~/.pypirc
-          [distutils]
-          index-servers = sargit
-          
-          [sargit]
-          repository = https://git.sarsoo.xyz/api/packages/${{ secrets.PYPI_USERNAME }}/pypi
-          username = ${{ secrets.PYPI_USERNAME }}
-          password = ${{ secrets.PYPI_KEY }}
-          EOF         
+      - name: Poetry Add Repo
+        run: poetry source add --priority=supplemental sargit https://git.sarsoo.xyz/api/packages/${{ secrets.PYPI_USERNAME }}/pypi
+
+      - name: Poetry Repo Creds
+        run: poetry config http-basic.sargit ${{ secrets.PYPI_USERNAME }} ${{ secrets.PYPI_KEY }}
 
       - name: Poetry Build
         run: poetry build
