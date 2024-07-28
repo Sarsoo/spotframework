@@ -70,4 +70,4 @@ jobs:
         run: poetry build
 
       - name: Poetry Publish
-        run: poetry publish
+        run: poetry publish --repository sargit
