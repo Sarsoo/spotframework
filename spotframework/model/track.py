@@ -29,14 +29,14 @@ class SimplifiedTrack:
     href: str
     id: str
     name: str
-    preview_url: str
     track_number: int
     type: str
     uri: Union[str, Uri]
     is_local: bool
+    preview_url: str = None
     is_playable: bool = None
     episode: bool = None
-    # track: bool = None
+    track: bool = None
 
     def __post_init__(self):
         if isinstance(self.uri, str):
